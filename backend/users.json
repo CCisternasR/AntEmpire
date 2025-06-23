@@ -1,0 +1,11 @@
+{
+  "hormiga1": {
+    "password": "colonia"
+  },
+  "admin": {
+    "password": "admin"
+  },
+  "nuevo": {
+    "password": "nuevo"
+  }
+}

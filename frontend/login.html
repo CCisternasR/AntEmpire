@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login - Imperio Hormiga</title>
+  <style>
+    body {
+          font-family: 'Segoe UI', sans-serif;
+	  background: #f1f8e9 url('/static/fondo_login.png') no-repeat center center;
+	  background-size: contain;
+	  margin: 0;
+	  padding: 0;
+	  height: 100vh;
+	  display: flex;
+	  align-items: center;
+	  justify-content: center;
+    }
+    .login-box {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.1);
+      width: 320px;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #2e7d32;
+    }
+    input[type="text"], input[type="password"] {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    button {
+      width: 100%;
+      background: #4caf50;
+      color: white;
+      border: none;
+      padding: 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    button:hover {
+      background: #388e3c;
+    }
+    .toggle-link {
+      text-align: center;
+      margin-top: 10px;
+      font-size: 0.9rem;
+      color: #555;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+<div class="login-box">
+  <h2 id="loginTitle">Iniciar Sesión</h2>
+  <input type="text" id="username" placeholder="Usuario">
+  <input type="password" id="password" placeholder="Contraseña">
+  <button onclick="submitLogin()">Continuar</button>
+  <div class="toggle-link" onclick="toggleLoginMode()" id="toggleMode"> ¿No tienes cuenta? Regístrate </div>
+</div>
+
+<script>
+  let isRegistering = false;
+  const API_BASE = 'http://18.221.200.182';
+
+  function toggleLoginMode() {
+    isRegistering = !isRegistering;
+    document.getElementById('loginTitle').textContent = isRegistering ? 'Registrarse' : 'Iniciar Sesión';
+    document.getElementById('toggleMode').textContent = isRegistering ? '¿Ya tienes cuenta? Inicia sesión' : '¿No tienes cuenta? Regístrate';
+  }
+
+  async function submitLogin() {
+    const user = document.getElementById('username').value.trim();
+    const pass = document.getElementById('password').value.trim();
+    if (!user || !pass) return alert('Completa todos los campos');
+
+    const endpoint = isRegistering ? '/register' : '/login';
+    try {
+      const res = await fetch(`${API_BASE}${endpoint}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ username: user, password: pass })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error desconocido');
+
+      if (isRegistering) {
+        alert('Usuario registrado. Ahora inicia sesión.');
+        document.getElementById('username').value = '';
+        document.getElementById('password').value = '';
+        toggleLoginMode();
+      } else {
+        window.location.href = '/juego.html';
+      }
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+</script>
+</body>
+</html>
