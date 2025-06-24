@@ -2,9 +2,13 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import json, os
 
-app = Flask(__name__)
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+STATIC_DIR = os.path.abspath(os.path.join(BASE_DIR, '..', 'static'))
+USER_FILE = os.path.join(BASE_DIR, 'users.json')
+
+app = Flask(__name__, static_folder=STATIC_DIR, static_url_path='/static')
 CORS(app)
-STATIC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'static'))
 
 @app.route('/')
 def root():
@@ -12,21 +16,27 @@ def root():
 
 @app.route('/juego.html')
 def juego():
-    return send_from_directory(STATIC_DIR, 'juego.html')
+    return app.send_static_file('juego.html')
 
 @app.route('/login', methods=['POST'])
 def login():
     data = request.json
     user, pwd = data.get('username'), data.get('password')
     users = load_users()
+
+    print("Usuario ingresado:", user)
+    print("Password ingresado:", pwd)
+    print("Usuarios cargados:", users)
+
     if user in users:
         stored = users[user]
-        # Acepta ambos formatos
         if isinstance(stored, dict):
             stored = stored.get('password')
+        print("Password esperado:", stored)
         if stored == pwd:
-            return jsonify({'message':'Login exitoso'})
-    return jsonify({'error':'Credenciales inválidas'}), 401
+            return jsonify({'message': 'Login exitoso'})
+    
+    return jsonify({'error': 'Credenciales inválidas'}), 401
 
 @app.route('/register', methods=['POST'])
 def register():
@@ -41,10 +51,12 @@ def register():
     return jsonify({'message': 'Usuario registrado'})
 
 def load_users():
-    if not os.path.exists('users.json'):
+    base_path = os.path.dirname(os.path.abspath(__file__))
+    users_path = os.path.join(base_path, 'users.json')
+    if not os.path.exists(users_path):
         return {}
-    with open('users.json') as f:
+    with open(users_path) as f:
         return json.load(f)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=80)
+    app.run(port=5000, debug=True)

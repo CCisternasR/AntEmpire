@@ -3,150 +3,37 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Imperio Hormiga - Prototipo v0.1.4</title>
-  <style>
-    :root {
-      --bg: #fefbe9;
-      --panel: #ffffff;
-      --primary: #4caf50;
-      --danger: #c0392b;
-      --font: 'Segoe UI', sans-serif;
-    }
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: var(--font);
-    }
-    body {
-      background: var(--bg);
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    h1 {
-      text-align: center;
-      margin-bottom: 5px;
-    }
-    .version {
-      text-align: center;
-      font-size: 0.9rem;
-      color: #555;
-      margin-bottom: 10px;
-    }
-    .dashboard {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 20px;
-      justify-content: center;
-    }
-    .card {
-      background: var(--panel);
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-      width: 240px;
-    }
-    .card h2 {
-      margin-bottom: 10px;
-      font-size: 1.2rem;
-    }
-    .resource {
-      font-size: 1.5rem;
-      margin-bottom: 6px;
-    }
-    button {
-      width: 100%;
-      margin-top: 10px;
-      padding: 10px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 1rem;
-      background: var(--primary);
-      color: #fff;
-      transition: background 0.3s;
-    }
-    button:hover {
-      background: #388e3c;
-    }
-    #queenBar {
-      width: 100%;
-      height: 18px;
-      border-radius: 8px;
-      background: #ddd;
-      overflow: hidden;
-      margin-top: 6px;
-    }
-    #queenHealth {
-      height: 100%;
-      background: var(--danger);
-      width: 100%;
-      transition: width 0.4s;
-    }
-    .log {
-      margin-top: 20px;
-      max-height: 140px;
-      overflow: auto;
-      background: #fafafa;
-      border-radius: 8px;
-      padding: 10px;
-      font-size: 0.9rem;
-      width: 90%;
-      max-width: 600px;
-    }
-    #animationZone {
-      margin-top: 15px;
-      text-align: center;
-      min-height: 28px;
-      font-size: 1.05rem;
-      color: #333;
-      transition: opacity 0.3s;
-      width: 90%;
-      max-width: 600px;
-    }
-    #miniMap {
-      display: grid;
-      grid-template-columns: repeat(25, 8px);
-      grid-template-rows: repeat(25, 8px);
-      gap: 1px;
-      margin-top: 15px;
-      background: #2e7d32;
-      padding: 4px;
-      border-radius: 6px;
-      box-shadow: 0 0 6px rgba(0, 0, 0, 0.3);
-    }
-    .miniTile {
-      width: 8px;
-      height: 8px;
-      background: #66bb6a;
-      cursor: pointer;
-      position: relative;
-    }
-    .miniTile.water { background: #4fc3f7; }
-    .miniTile.seed { background: #fdd835; }
-    .miniTile.leaf { background: #aed581; }
-    .miniTile.danger { background: #ef5350; }
-    .miniTile:hover { outline: 1px solid #000; }
-    .tooltip {
-      position: absolute;
-      background: #000;
-      color: #fff;
-      padding: 2px 4px;
-      border-radius: 3px;
-      font-size: 9px;
-      white-space: nowrap;
-      pointer-events: none;
-      transform: translate(-50%, -120%);
-      z-index: 10;
-    }
-  </style>
-</head>
+  <title>AntEmpire - Prototipo v0.1.5 🐜</title>
+  <link rel="stylesheet" href="/static/juego.css">
+  </head>
 <body>
+<div id="welcome" class="welcome-message">
+  <span>Bienvenido, <strong id="usernameDisplay">hormiga</strong></span>
+  <button id="logoutBtn" onclick="cerrarSesion()">Cerrar sesión</button>
+</div>
 
-<h1>Imperio Hormiga 🐜 - Prototipo</h1>
-<div class="version">v0.1.4</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+  const user = localStorage.getItem('loggedUser');
+  if (!user) {
+    alert("Debes iniciar sesión primero");
+    window.location.href = "/";
+  } else {
+    const display = document.getElementById('usernameDisplay');
+    if (display) display.textContent = user;
+  }
+});
+</script>
+<script>
+  function cerrarSesion() {
+    localStorage.removeItem('usuario');
+    window.location.href = "/";
+  }
+</script>
+
+<h1>AntEmpire - Prototipo 🐜</h1>
+<div class="version">v0.1.5</div>
 <div id="miniMap"></div>
 
 <div class="dashboard">
