@@ -4,14 +4,15 @@ import json, os
 
 app = Flask(__name__)
 CORS(app)
+STATIC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'static'))
 
 @app.route('/')
 def root():
-    return send_from_directory('.', 'login.html')
+    return send_from_directory(STATIC_DIR, 'login.html')
 
 @app.route('/juego.html')
-def serve_juego():
-    return send_from_directory('.', 'juego.html')
+def juego():
+    return send_from_directory(STATIC_DIR, 'juego.html')
 
 @app.route('/login', methods=['POST'])
 def login():
