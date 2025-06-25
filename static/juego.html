@@ -3,48 +3,59 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>AntEmpire - Prototipo v0.1.5 🐜</title>
+  <title>AntEmpire - Prototipo v0.1.8 🐜</title>
   <link rel="stylesheet" href="/static/juego.css">
-  </head>
+  <style>
+    .anthill { background: #8D6E63 !important; cursor: default; }
+    #progressBarContainer {
+      width: 100px;
+      height: 10px;
+      margin: 10px auto;
+      border: 1px solid #444;
+      background-color: #eee;
+      display: none;
+    }
+    #progressBar {
+      height: 100%;
+      width: 0%;
+      background-color: purple;
+      transition: width 0.4s linear;
+    }
+  </style>
+</head>
+
 <body>
 <div id="welcome" class="welcome-message">
   <span>Bienvenido, <strong id="usernameDisplay">hormiga</strong></span>
   <button id="logoutBtn" onclick="cerrarSesion()">Cerrar sesión</button>
 </div>
-
-
 <script>
   document.addEventListener('DOMContentLoaded', () => {
-  const user = localStorage.getItem('loggedUser');
-  if (!user) {
-    alert("Debes iniciar sesión primero");
-    window.location.href = "/";
-  } else {
-    const display = document.getElementById('usernameDisplay');
-    if (display) display.textContent = user;
-  }
-});
-</script>
-<script>
-  function cerrarSesion() {
-    localStorage.removeItem('usuario');
-    window.location.href = "/";
-  }
+    const user = localStorage.getItem('loggedUser');
+    if (!user) {
+      alert("Debes iniciar sesión primero");
+      window.location.href = "/";
+    } else {
+      const display = document.getElementById('usernameDisplay');
+      if (display) display.textContent = user;
+    }
+  });
+  function cerrarSesion(){localStorage.removeItem('loggedUser');window.location.href='/';}
 </script>
 
 <h1>AntEmpire - Prototipo 🐜</h1>
-<div class="version">v0.1.5</div>
+<div class="version">v0.1.8</div>
 <div id="miniMap"></div>
+
 
 <div class="dashboard">
   <div class="card">
     <h2>Recursos</h2>
     <div class="resource" id="food">🍃 Hojas: 10</div>
     <div class="resource" id="fighters">🛡️ Combatientes: 0</div>
-    <div class="resource" id="energy">⚡ Energía hormiga: 100</div>
+    <div class="resource" id="energy">⚡ Energía: 100</div>
     <button id="btnCombatiente">Entrenar combatiente (-5 hojas)</button>
   </div>
-
   <div class="card">
     <h2>Hormiguero</h2>
     <div>👑 Salud de la Reina</div>
@@ -55,138 +66,133 @@
 </div>
 
 <div id="animationZone">Selecciona una celda del minimapa para enviar una recolectora</div>
+<div id="progressBarContainer"><div id="progressBar"></div></div>
 <div class="log" id="log"></div>
 
 <script>
-(function () {
-  let food = 10, fighters = 0, queenHP = 100, energy = 100;
-  const center = { x: 12, y: 12 };
-  const elFood = document.getElementById('food');
-  const elFighters = document.getElementById('fighters');
-  const elEnergy = document.getElementById('energy');
-  const elQueen = document.getElementById('queenHealth');
-  const elLog = document.getElementById('log');
-  const elAnim = document.getElementById('animationZone');
-  const miniMap = document.getElementById('miniMap');
+(async function(){
+  let food=10,fighters=0,queenHP=100,energy=100;
+  const center={x:12,y:12};
+  let busy=false;
 
-  function updateUI() {
-    elFood.textContent = `🍃 Hojas: ${food}`;
-    elFighters.textContent = `🛡️ Combatientes: ${fighters}`;
-    elEnergy.textContent = `⚡ Energía hormiga: ${energy}`;
-    elQueen.style.width = queenHP + '%';
-  }
-  function log(msg) {
-    const div = document.createElement('div');
-    div.textContent = new Date().toLocaleTimeString() + ' - ' + msg;
-    elLog.prepend(div);
-  }
-  function animate(txt, dur = 2000) {
-    elAnim.textContent = txt;
-    elAnim.style.opacity = 1;
-    setTimeout(() => { elAnim.style.opacity = 0.4; }, dur);
-  }
+  const elFood=document.getElementById('food');
+  const elFighters=document.getElementById('fighters');
+  const elEnergy=document.getElementById('energy');
+  const elQueen=document.getElementById('queenHealth');
+  const elLog=document.getElementById('log');
+  const elAnim=document.getElementById('animationZone');
+  const miniMap=document.getElementById('miniMap');
+  const progressBar=document.getElementById('progressBar');
+  const progressContainer=document.getElementById('progressBarContainer');
 
-  const types = ['water', 'seed', 'leaf', 'danger'];
-  function createTile(x, y) {
-    const tile = document.createElement('div');
-    const type = types[Math.floor(Math.random() * types.length)];
-    tile.className = 'miniTile ' + type;
-    tile.dataset.type = type;
-    tile.dataset.x = x;
-    tile.dataset.y = y;
-    tile.title = type;
-    tile.addEventListener('mouseenter', showTooltip);
-    tile.addEventListener('mouseleave', hideTooltip);
-    tile.addEventListener('click', handleTileClick);
+  function updateUI(){
+    elFood.textContent=`🍃 Hojas: ${food}`;
+    elFighters.textContent=`🛡️ Combatientes: ${fighters}`;
+    elEnergy.textContent=`⚡ Energía: ${energy}`;
+    elQueen.style.width=queenHP+'%';
+  }
+  function log(msg){const d=document.createElement('div');d.textContent=new Date().toLocaleTimeString()+' - '+msg;elLog.prepend(d);}
+  function animate(txt){elAnim.textContent=txt;elAnim.style.opacity=1;}
+  async function cargarEstado(){const r=await fetch('/cargar_estado');if(r.ok){const d=await r.json();if(d.food!==undefined){food=d.food;fighters=d.fighters;energy=d.energy;queenHP=d.queenHP;}}}
+  function guardarEstado(){fetch('/guardar_estado',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({food,fighters,energy,queenHP})});}
+
+  const types=['water','seed','leaf','danger'];
+  function createTile(x,y){
+    const tile=document.createElement('div');
+    if(x===center.x && y===center.y){tile.className='miniTile anthill';tile.title='Hormiguero';return tile;}
+    const type=types[Math.floor(Math.random()*types.length)];
+    tile.className='miniTile '+type;
+    tile.dataset.type=type;tile.dataset.x=x;tile.dataset.y=y;tile.title=type;
+    tile.addEventListener('mouseenter',showTooltip);
+    tile.addEventListener('mouseleave',hideTooltip);
+    tile.addEventListener('click',handleTileClick);
     return tile;
   }
+  function generateMiniMap(){for(let y=0;y<25;y++){for(let x=0;x<25;x++){miniMap.appendChild(createTile(x,y));}}}
 
-  function generateMiniMap() {
-    for (let y = 0; y < 25; y++) {
-      for (let x = 0; x < 25; x++) {
-        miniMap.appendChild(createTile(x, y));
-      }
-    }
-  }
-
-  let tooltip;
-  function showTooltip(e) {
-    const type = e.target.dataset.type;
-    tooltip = document.createElement('div');
-    tooltip.className = 'tooltip';
-    tooltip.textContent = type;
-    e.target.appendChild(tooltip);
-  }
-  function hideTooltip() {
-    if (tooltip) tooltip.remove();
-    tooltip = null;
-  }
+  let tooltip;function showTooltip(e){const t=e.target.dataset.type||'hormiguero';tooltip=document.createElement('div');tooltip.className='tooltip';tooltip.textContent=t;e.target.appendChild(tooltip);}function hideTooltip(){if(tooltip)tooltip.remove();tooltip=null;}
 
   function handleTileClick(e) {
+    if (busy) return log('🚫 Ya hay una recolectora en misión');
+
     const tile = e.target.closest('.miniTile');
-    if (!tile) return;
+    if (!tile || tile.classList.contains('anthill')) return;
+
     const type = tile.dataset.type;
-    const x = parseInt(tile.dataset.x), y = parseInt(tile.dataset.y);
+    const x = +tile.dataset.x, y = +tile.dataset.y;
     const dist = Math.abs(x - center.x) + Math.abs(y - center.y);
     const energyCost = 5 + dist;
+
     if (energyCost > energy) {
-      log(`🚫 Energía insuficiente (${energyCost} req.).`);
+      log(`🚫 Energía insuficiente (${energyCost})`);
       animate('Sin energía');
       return;
     }
+
     energy -= energyCost;
+    updateUI();
+    busy = true;
+
+    animate(`🐜 Saliendo hacia zona ${type}`);
+    progressContainer.style.display = 'block';
+    progressBar.style.backgroundColor = 'purple';
+    progressBar.style.width = '0%';
+
+    const duration = dist * 400;
+    progressBar.style.transition = `width ${duration}ms linear`;
+    requestAnimationFrame(() => progressBar.style.width = '100%');
+
     const risk = type === 'danger' ? 0.6 : type === 'water' ? 0.2 : type === 'seed' ? 0.3 : 0.1;
-    animate(`🐜 recolectora → (${x},${y})`);
+
     setTimeout(() => {
-      if (Math.random() < risk) {
-        log(`💀 La recolectora fue perdida en zona ${type}.`);
-        animate('Recolectora perdida');
-      } else {
+      const fracaso = Math.random() < risk;
+      if (fracaso) {
+        animate('💀 La recolectora fue perdida');
+        log(`💀 La recolectora fue perdida en zona ${type}`);
+        busy = false;
+        progressContainer.style.display = 'none';
+        guardarEstado();
+        return;
+      }
+
+      animate('🐜 Recolectora regresando');
+      progressBar.style.backgroundColor = 'saddlebrown';
+      progressBar.style.width = '0%';
+      progressBar.style.transition = `width ${duration}ms linear`;
+      requestAnimationFrame(() => progressBar.style.width = '0%');
+
+      setTimeout(() => {
         let gain = 0;
         switch (type) {
           case 'leaf': gain = Math.floor(Math.random() * 3) + 2; food += gain; break;
           case 'seed': gain = Math.floor(Math.random() * 5) + 3; food += gain; break;
-          case 'water': gain = 0; log('💧 Agua encontrada (aún sin uso)'); break;
+          case 'water': log('💧 Agua encontrada'); break;
         }
-        if (gain > 0) log(`✅ +${gain} hojas/seeds recolectadas de ${type}.`);
-        animate(`✅ Misión exitosa (+${gain})`);
-      }
-      updateUI();
-    }, 800);
+        updateUI();
+        guardarEstado();
+        busy = false;
+        progressContainer.style.display = 'none';
+        if (gain > 0) {
+          log(`📦 Recolectó +${gain} (${type})`);
+        }
+      }, duration);
+    }, duration);
   }
 
-  function trainFighter() {
-    if (food < 5) return log('No hay hojas suficientes.');
-    food -= 5;
-    fighters++;
-    updateUI();
-    log('Nuevo combatiente entrenado');
-  }
-  function feedQueen() {
-    if (food < 3 || queenHP >= 100) return log('No se puede alimentar.');
-    food -= 3;
-    queenHP = Math.min(100, queenHP + 15);
-    updateUI();
-    log('Reina alimentada');
-  }
-  function enemyAttack() {
-    const damage = Math.floor(Math.random() * 20) + 10;
-    const defend = Math.min(damage, fighters * 10);
-    queenHP = Math.max(0, queenHP - (damage - defend));
-    fighters = Math.max(0, fighters - Math.ceil(defend / 10));
-    log(`⚔️ Ataque enemigo! Daño ${damage}, defendido ${defend}`);
-    if (queenHP <= 0) animate('La reina ha caído');
-    updateUI();
-  }
+  function trainFighter(){if(food<5)return log('No hay hojas suficientes.');food-=5;fighters++;updateUI();guardarEstado();log('Nuevo combatiente entrenado');}
+  function feedQueen(){if(food<3||queenHP>=100)return log('No se puede alimentar.');food-=3;queenHP=Math.min(100,queenHP+15);updateUI();guardarEstado();log('Reina alimentada');}
+  function enemyAttack(){const dmg=Math.floor(Math.random()*20)+10;const defend=Math.min(dmg,fighters*10);queenHP=Math.max(0,queenHP-(dmg-defend));fighters=Math.max(0,fighters-Math.ceil(defend/10));updateUI();guardarEstado();log(`⚔️ Ataque enemigo! Daño ${dmg}, defendido ${defend}`);}
 
-  document.getElementById('btnCombatiente').onclick = trainFighter;
-  document.getElementById('btnAlimentar').onclick = feedQueen;
-  document.getElementById('btnAtaque').onclick = enemyAttack;
+  document.getElementById('btnCombatiente').onclick=trainFighter;
+  document.getElementById('btnAlimentar').onclick=feedQueen;
+  document.getElementById('btnAtaque').onclick=enemyAttack;
+
+  setInterval(()=>{if(energy<100){energy=Math.min(100,energy+5);updateUI();guardarEstado();log('⚡ Energía recargada (+5)');}},3000);
 
   generateMiniMap();
+  await cargarEstado();
   updateUI();
 })();
 </script>
-
 </body>
 </html>

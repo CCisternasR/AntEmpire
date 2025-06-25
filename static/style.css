@@ -85,6 +85,15 @@ button:hover {
   color: #555;
   cursor: pointer;
 }
+  .anthill { background: #8D6E63 !important; cursor: default; }
+
+
+
+  .animation-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-top: 8px;
+  }
 
 /* Responsividad extra para pantallas pequeñas */
 @media (max-height: 500px) {
