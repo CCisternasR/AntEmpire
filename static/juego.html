@@ -25,10 +25,23 @@
 </head>
 
 <body>
+  <video id="introVideo" autoplay muted playsinline>
+  <source src="/static/HormigaVideo.mp4" type="video/mp4">
+  Tu navegador no soporta videos.
+  </video>
+  <script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const video = document.getElementById('introVideo');
+    video.onended = () => {
+      video.style.display = 'none';
+    };
+  });
+</script>
 <div id="welcome" class="welcome-message">
   <span>Bienvenido, <strong id="usernameDisplay">hormiga</strong></span>
   <button id="logoutBtn" onclick="cerrarSesion()">Cerrar sesión</button>
 </div>
+
 <script>
   document.addEventListener('DOMContentLoaded', () => {
     const user = localStorage.getItem('loggedUser');
@@ -54,7 +67,13 @@
     <div class="resource" id="food">🍃 Hojas: 10</div>
     <div class="resource" id="fighters">🛡️ Combatientes: 0</div>
     <div class="resource" id="energy">⚡ Energía: 100</div>
+    <div class="resource" id="levelExplorer">🔍 Exploradoras: Nivel 1</div>
+    <div class="resource" id="levelFighter">⚔️ Guerreras: Nivel 1</div>
+    <div class="resource" id="levelQueen">👑 Reina: Nivel 1</div>
+    <div class="resource" id="levelCombat">🛡️ Combatientes: Nivel 1</div>
     <button id="btnCombatiente">Entrenar combatiente (-5 hojas)</button>
+    <button id="btnExploradora">Entrenar exploradora (-2 hojas)</button>
+    <button id="btnGuerrera">Entrenar guerrera (-4 hojas)</button>
   </div>
   <div class="card">
     <h2>Hormiguero</h2>
@@ -72,11 +91,18 @@
 <script>
 (async function(){
   let food=10,fighters=0,queenHP=100,energy=100;
+  let levelExplorer=1, levelFighter=1, levelQueen=1, levelCombat=1;
+  let exploradoras = 0;
+  let guerreras = 0;
   const center={x:12,y:12};
   let busy=false;
 
   const elFood=document.getElementById('food');
   const elFighters=document.getElementById('fighters');
+  const elExploradoras = document.createElement('div');
+  const elGuerreras = document.createElement('div');
+  elFighters.insertAdjacentElement('afterend', elExploradoras);
+  elExploradoras.insertAdjacentElement('afterend', elGuerreras);
   const elEnergy=document.getElementById('energy');
   const elQueen=document.getElementById('queenHealth');
   const elLog=document.getElementById('log');
@@ -84,17 +110,30 @@
   const miniMap=document.getElementById('miniMap');
   const progressBar=document.getElementById('progressBar');
   const progressContainer=document.getElementById('progressBarContainer');
+  const elLevelExplorer=document.getElementById('levelExplorer');
+  const elLevelFighter=document.getElementById('levelFighter');
+  const elLevelQueen=document.getElementById('levelQueen');
+  const elLevelCombat=document.getElementById('levelCombat');
 
   function updateUI(){
+    elExploradoras.textContent = `🔎 Exploradoras: ${exploradoras}`;
+    elGuerreras.textContent = `⚔️ Guerreras: ${guerreras}`;
     elFood.textContent=`🍃 Hojas: ${food}`;
     elFighters.textContent=`🛡️ Combatientes: ${fighters}`;
     elEnergy.textContent=`⚡ Energía: ${energy}`;
     elQueen.style.width=queenHP+'%';
+    elLevelExplorer.textContent=`🔍 Exploradoras: Nivel ${levelExplorer}`;
+    elLevelFighter.textContent=`⚔️ Guerreras: Nivel ${levelFighter}`;
+    elLevelQueen.textContent=`👑 Reina: Nivel ${levelQueen}`;
+    elLevelCombat.textContent=`🛡️ Combatientes: Nivel ${levelCombat}`;
   }
   function log(msg){const d=document.createElement('div');d.textContent=new Date().toLocaleTimeString()+' - '+msg;elLog.prepend(d);}
   function animate(txt){elAnim.textContent=txt;elAnim.style.opacity=1;}
-  async function cargarEstado(){const r=await fetch('/cargar_estado');if(r.ok){const d=await r.json();if(d.food!==undefined){food=d.food;fighters=d.fighters;energy=d.energy;queenHP=d.queenHP;}}}
-  function guardarEstado(){fetch('/guardar_estado',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({food,fighters,energy,queenHP})});}
+  async function cargarEstado(){const r=await fetch('/cargar_estado');if(r.ok){const d=await r.json();
+    if(d.food!==undefined){food=d.food;fighters=d.fighters;energy=d.energy;queenHP=d.queenHP;
+        levelExplorer=d.levelExplorer||1;levelFighter=d.levelFighter||1;levelQueen=d.levelQueen||1;levelCombat=d.levelCombat||1;}}}
+  function guardarEstado(){fetch('/guardar_estado',{method:'POST',headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({food,fighters,energy,queenHP,exploradoras, guerreras,levelExplorer, levelFighter, levelQueen, levelCombat})});}
 
   const types=['water','seed','leaf','danger'];
   function createTile(x,y){
@@ -142,7 +181,8 @@
     progressBar.style.transition = `width ${duration}ms linear`;
     requestAnimationFrame(() => progressBar.style.width = '100%');
 
-    const risk = type === 'danger' ? 0.6 : type === 'water' ? 0.2 : type === 'seed' ? 0.3 : 0.1;
+    let risk = type === 'danger'?0.6:type === 'water' ? 0.2 : type === 'seed'?0.3:0.1;if(exploradoras > 0){risk *= 0.5;exploradoras--;log('🔎Una exploradora acompañó la misión, reduciendo el riesgo'); }
+
 
     setTimeout(() => {
       const fracaso = Math.random() < risk;
@@ -180,12 +220,17 @@
   }
 
   function trainFighter(){if(food<5)return log('No hay hojas suficientes.');food-=5;fighters++;updateUI();guardarEstado();log('Nuevo combatiente entrenado');}
+  function trainExplorer() {if (food < 2) return log('No hay hojas suficientes para exploradora');food -= 2;exploradoras++;updateUI();guardarEstado();log('Nueva exploradora entrenada');}
+  function trainWarrior() {if (food < 4) return log('No hay hojas suficientes para guerrera');food -= 4;guerreras++;updateUI();guardarEstado();log('Nueva guerrera entrenada');}
   function feedQueen(){if(food<3||queenHP>=100)return log('No se puede alimentar.');food-=3;queenHP=Math.min(100,queenHP+15);updateUI();guardarEstado();log('Reina alimentada');}
   function enemyAttack(){const dmg=Math.floor(Math.random()*20)+10;const defend=Math.min(dmg,fighters*10);queenHP=Math.max(0,queenHP-(dmg-defend));fighters=Math.max(0,fighters-Math.ceil(defend/10));updateUI();guardarEstado();log(`⚔️ Ataque enemigo! Daño ${dmg}, defendido ${defend}`);}
 
   document.getElementById('btnCombatiente').onclick=trainFighter;
   document.getElementById('btnAlimentar').onclick=feedQueen;
   document.getElementById('btnAtaque').onclick=enemyAttack;
+  document.getElementById('btnExploradora').onclick = trainExplorer;
+  document.getElementById('btnGuerrera').onclick = trainWarrior;
+
 
   setInterval(()=>{if(energy<100){energy=Math.min(100,energy+5);updateUI();guardarEstado();log('⚡ Energía recargada (+5)');}},3000);
 

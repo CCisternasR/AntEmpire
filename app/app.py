@@ -60,9 +60,19 @@ def guardar_estado_usuario():
     if "usuario" not in session:
         return jsonify({"error": "No autenticado"}), 401
     data = request.json
-    guardar_estado(session["usuario"],
-                   data["food"], data["fighters"],
-                   data["energy"], data["queenHP"])
+    guardar_estado(
+        session["usuario"],
+        data["food"],
+        data["fighters"],
+        data["energy"],
+        data["queenHP"],
+        data.get("exploradoras", 0),
+        data.get("guerreras", 0),
+        data.get("levelExplorer", 1),
+        data.get("levelFighter", 1),
+        data.get("levelQueen", 1),
+        data.get("levelCombat", 1)
+    )
     return jsonify({"ok": True})
 
 @app.route("/cargar_estado", methods=["GET"])
