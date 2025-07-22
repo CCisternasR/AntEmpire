@@ -3,241 +3,154 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>AntEmpire - Prototipo v0.1.8 🐜</title>
+  <meta name="description" content="AntEmpire - Un juego de estrategia sobre hormigas" />
+  <title>AntEmpire - Prototipo v0.2.0 🐜</title>
   <link rel="stylesheet" href="/static/juego.css">
-  <style>
-    .anthill { background: #8D6E63 !important; cursor: default; }
-    #progressBarContainer {
-      width: 100px;
-      height: 10px;
-      margin: 10px auto;
-      border: 1px solid #444;
-      background-color: #eee;
-      display: none;
-    }
-    #progressBar {
-      height: 100%;
-      width: 0%;
-      background-color: purple;
-      transition: width 0.4s linear;
-    }
-  </style>
+  <script src="/static/juego.js" defer></script>
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐜</text></svg>">
 </head>
 
 <body>
-  <video id="introVideo" autoplay muted playsinline>
-  <source src="/static/HormigaVideo.mp4" type="video/mp4">
-  Tu navegador no soporta videos.
-  </video>
+  <!-- Barra superior: bienvenida y logout -->
+  <div class="welcome-message">
+    <span>🐜 Bienvenido, <strong id="usernameDisplay">hormiga</strong></span>
+    <div class="controls">
+      <button id="helpBtn" class="help-btn" title="Ayuda">❓</button>
+      <button id="logoutBtn" onclick="cerrarSesion()">Cerrar sesión</button>
+    </div>
+  </div>
+  <!-- js de bienvenida -->
+  <script src="/static/welcome.js"></script>
+  <!-- Logica del juego -->
+  
+  <!-- Título central y versión -->
+  <header>
+    <h1>AntEmpire – Prototipo</h1>
+    <div class="version">v0.2.0</div>
+  </header>
+
+  <!-- Layout principal: sidebar izquierda, contenido, panel hormiguero -->
+  <div class="dashboard">
+    <!-- Panel lateral: Recursos -->
+    <aside class="card">
+      <h2>Recursos</h2>
+      <div class="resources-container">
+        <div class="resource" id="food">🍃 Hojas: <span class="resource-value">10</span></div>
+        <div class="resource" id="fighters">🛡️ Combatientes: <span class="resource-value">0</span></div>
+        <div class="resource" id="energy">⚡ Energía: <span class="resource-value">100</span></div>
+      </div>
+      
+      <h2>Niveles</h2>
+      <div class="resources-container">
+        <div class="resource" id="levelExplorer">🔍 Exploradoras: Nivel <span class="resource-value">1</span></div>
+        <div class="resource" id="levelFighter">⚔️ Guerreras: Nivel <span class="resource-value">1</span></div>
+        <div class="resource" id="levelQueen">👑 Reina: Nivel <span class="resource-value">1</span></div>
+        <div class="resource" id="levelCombat">🛡️ Combatientes: Nivel <span class="resource-value">1</span></div>
+      </div>
+      
+      <h2>Entrenamiento</h2>
+      <div class="button-group">
+        <button id="btnCombatiente" class="action-btn" title="Entrena una hormiga combatiente para defender el hormiguero">Entrenar combatiente (-5 hojas)</button>
+        <button id="btnExploradora" class="action-btn" title="Entrena una hormiga exploradora para reducir riesgos en misiones">Entrenar exploradora (-2 hojas)</button>
+        <button id="btnGuerrera" class="action-btn" title="Entrena una hormiga guerrera para atacar otros hormigueros">Entrenar guerrera (-4 hojas)</button>
+      </div>
+    </aside>
+
+    <!-- Zona principal: mini-mapa, acciones y log -->
+    <main class="card">
+      <h2>Mini-mapa <span class="map-legend">🟢 Hojas | 🟠 Semillas | 🔵 Agua | 🔴 Peligro</span></h2>
+      <div id="miniMap"></div>
+
+      <h2>Acciones</h2>
+      <div id="animationZone">Selecciona una celda del minimapa para enviar una recolectora</div>
+      <div id="progressBarContainer"><div id="progressBar"></div></div>
+
+      <h2>Registro <button id="clearLog" class="small-btn" title="Limpiar registro">🗑️</button></h2>
+      <div class="log" id="log"></div>
+    </main>
+
+    <!-- Panel derecho: Hormiguero -->
+    <aside class="card">
+      <h2>Hormiguero</h2>
+      <div class="queen-status">
+        <div>👑 Salud de la Reina</div>
+        <div id="queenBar"><div id="queenHealth"></div></div>
+      </div>
+      
+      <div class="colony-stats">
+        <div class="stat-item" id="exploradoras">🔎 Exploradoras: <span class="stat-value">0</span></div>
+        <div class="stat-item" id="guerreras">⚔️ Guerreras: <span class="stat-value">0</span></div>
+      </div>
+      
+      <div class="button-group">
+        <button id="btnAlimentar" class="action-btn" title="Alimenta a la reina para mantenerla saludable">Alimentar reina (-3 hojas)</button>
+        <button id="btnAtaque" class="danger-btn" title="Simula un ataque enemigo">¡Ataque enemigo!</button>
+      </div>
+    </aside>
+  </div>
+  <!-- Modal de ayuda -->
+  <div id="helpModal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn">&times;</span>
+      <h2>Cómo jugar AntEmpire 🐜</h2>
+      <div class="help-content">
+        <h3>Objetivo</h3>
+        <p>Construye y expande tu colonia de hormigas recolectando recursos y defendiéndote de ataques.</p>
+        
+        <h3>Recolección</h3>
+        <p>Haz clic en las celdas del mapa para enviar hormigas recolectoras:</p>
+        <ul>
+          <li><span class="leaf-icon">🟢</span> <strong>Hojas</strong>: Recursos básicos (2-4 hojas)</li>
+          <li><span class="seed-icon">🟠</span> <strong>Semillas</strong>: Más recursos pero más riesgo (3-7 hojas)</li>
+          <li><span class="water-icon">🔵</span> <strong>Agua</strong>: Necesaria para la colonia</li>
+          <li><span class="danger-icon">🔴</span> <strong>Peligro</strong>: Alto riesgo, posibles recompensas</li>
+        </ul>
+        
+        <h3>Unidades</h3>
+        <ul>
+          <li><strong>Exploradoras</strong>: Reducen el riesgo en misiones</li>
+          <li><strong>Combatientes</strong>: Defienden el hormiguero</li>
+          <li><strong>Guerreras</strong>: Atacan otros hormigueros</li>
+        </ul>
+        
+        <h3>Consejos</h3>
+        <p>Mantén a tu reina alimentada y entrena suficientes combatientes para defenderte de ataques.</p>
+      </div>
+    </div>
+  </div>
+  
   <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const video = document.getElementById('introVideo');
-    video.onended = () => {
-      video.style.display = 'none';
-    };
-  });
-</script>
-<div id="welcome" class="welcome-message">
-  <span>Bienvenido, <strong id="usernameDisplay">hormiga</strong></span>
-  <button id="logoutBtn" onclick="cerrarSesion()">Cerrar sesión</button>
-</div>
-
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const user = localStorage.getItem('loggedUser');
-    if (!user) {
-      alert("Debes iniciar sesión primero");
-      window.location.href = "/";
-    } else {
-      const display = document.getElementById('usernameDisplay');
-      if (display) display.textContent = user;
-    }
-  });
-  function cerrarSesion(){localStorage.removeItem('loggedUser');window.location.href='/';}
-</script>
-
-<h1>AntEmpire - Prototipo 🐜</h1>
-<div class="version">v0.1.8</div>
-<div id="miniMap"></div>
-
-
-<div class="dashboard">
-  <div class="card">
-    <h2>Recursos</h2>
-    <div class="resource" id="food">🍃 Hojas: 10</div>
-    <div class="resource" id="fighters">🛡️ Combatientes: 0</div>
-    <div class="resource" id="energy">⚡ Energía: 100</div>
-    <div class="resource" id="levelExplorer">🔍 Exploradoras: Nivel 1</div>
-    <div class="resource" id="levelFighter">⚔️ Guerreras: Nivel 1</div>
-    <div class="resource" id="levelQueen">👑 Reina: Nivel 1</div>
-    <div class="resource" id="levelCombat">🛡️ Combatientes: Nivel 1</div>
-    <button id="btnCombatiente">Entrenar combatiente (-5 hojas)</button>
-    <button id="btnExploradora">Entrenar exploradora (-2 hojas)</button>
-    <button id="btnGuerrera">Entrenar guerrera (-4 hojas)</button>
-  </div>
-  <div class="card">
-    <h2>Hormiguero</h2>
-    <div>👑 Salud de la Reina</div>
-    <div id="queenBar"><div id="queenHealth"></div></div>
-    <button id="btnAlimentar">Alimentar reina (-3 hojas)</button>
-    <button id="btnAtaque">¡Ataque enemigo!</button>
-  </div>
-</div>
-
-<div id="animationZone">Selecciona una celda del minimapa para enviar una recolectora</div>
-<div id="progressBarContainer"><div id="progressBar"></div></div>
-<div class="log" id="log"></div>
-
-<script>
-(async function(){
-  let food=10,fighters=0,queenHP=100,energy=100;
-  let levelExplorer=1, levelFighter=1, levelQueen=1, levelCombat=1;
-  let exploradoras = 0;
-  let guerreras = 0;
-  const center={x:12,y:12};
-  let busy=false;
-
-  const elFood=document.getElementById('food');
-  const elFighters=document.getElementById('fighters');
-  const elExploradoras = document.createElement('div');
-  const elGuerreras = document.createElement('div');
-  elFighters.insertAdjacentElement('afterend', elExploradoras);
-  elExploradoras.insertAdjacentElement('afterend', elGuerreras);
-  const elEnergy=document.getElementById('energy');
-  const elQueen=document.getElementById('queenHealth');
-  const elLog=document.getElementById('log');
-  const elAnim=document.getElementById('animationZone');
-  const miniMap=document.getElementById('miniMap');
-  const progressBar=document.getElementById('progressBar');
-  const progressContainer=document.getElementById('progressBarContainer');
-  const elLevelExplorer=document.getElementById('levelExplorer');
-  const elLevelFighter=document.getElementById('levelFighter');
-  const elLevelQueen=document.getElementById('levelQueen');
-  const elLevelCombat=document.getElementById('levelCombat');
-
-  function updateUI(){
-    elExploradoras.textContent = `🔎 Exploradoras: ${exploradoras}`;
-    elGuerreras.textContent = `⚔️ Guerreras: ${guerreras}`;
-    elFood.textContent=`🍃 Hojas: ${food}`;
-    elFighters.textContent=`🛡️ Combatientes: ${fighters}`;
-    elEnergy.textContent=`⚡ Energía: ${energy}`;
-    elQueen.style.width=queenHP+'%';
-    elLevelExplorer.textContent=`🔍 Exploradoras: Nivel ${levelExplorer}`;
-    elLevelFighter.textContent=`⚔️ Guerreras: Nivel ${levelFighter}`;
-    elLevelQueen.textContent=`👑 Reina: Nivel ${levelQueen}`;
-    elLevelCombat.textContent=`🛡️ Combatientes: Nivel ${levelCombat}`;
-  }
-  function log(msg){const d=document.createElement('div');d.textContent=new Date().toLocaleTimeString()+' - '+msg;elLog.prepend(d);}
-  function animate(txt){elAnim.textContent=txt;elAnim.style.opacity=1;}
-  async function cargarEstado(){const r=await fetch('/cargar_estado');if(r.ok){const d=await r.json();
-    if(d.food!==undefined){food=d.food;fighters=d.fighters;energy=d.energy;queenHP=d.queenHP;
-        levelExplorer=d.levelExplorer||1;levelFighter=d.levelFighter||1;levelQueen=d.levelQueen||1;levelCombat=d.levelCombat||1;}}}
-  function guardarEstado(){fetch('/guardar_estado',{method:'POST',headers:{'Content-Type':'application/json'},
-  body:JSON.stringify({food,fighters,energy,queenHP,exploradoras, guerreras,levelExplorer, levelFighter, levelQueen, levelCombat})});}
-
-  const types=['water','seed','leaf','danger'];
-  function createTile(x,y){
-    const tile=document.createElement('div');
-    if(x===center.x && y===center.y){tile.className='miniTile anthill';tile.title='Hormiguero';return tile;}
-    const type=types[Math.floor(Math.random()*types.length)];
-    tile.className='miniTile '+type;
-    tile.dataset.type=type;tile.dataset.x=x;tile.dataset.y=y;tile.title=type;
-    tile.addEventListener('mouseenter',showTooltip);
-    tile.addEventListener('mouseleave',hideTooltip);
-    tile.addEventListener('click',handleTileClick);
-    return tile;
-  }
-  function generateMiniMap(){for(let y=0;y<25;y++){for(let x=0;x<25;x++){miniMap.appendChild(createTile(x,y));}}}
-
-  let tooltip;function showTooltip(e){const t=e.target.dataset.type||'hormiguero';tooltip=document.createElement('div');tooltip.className='tooltip';tooltip.textContent=t;e.target.appendChild(tooltip);}function hideTooltip(){if(tooltip)tooltip.remove();tooltip=null;}
-
-  function handleTileClick(e) {
-    if (busy) return log('🚫 Ya hay una recolectora en misión');
-
-    const tile = e.target.closest('.miniTile');
-    if (!tile || tile.classList.contains('anthill')) return;
-
-    const type = tile.dataset.type;
-    const x = +tile.dataset.x, y = +tile.dataset.y;
-    const dist = Math.abs(x - center.x) + Math.abs(y - center.y);
-    const energyCost = 5 + dist;
-
-    if (energyCost > energy) {
-      log(`🚫 Energía insuficiente (${energyCost})`);
-      animate('Sin energía');
-      return;
-    }
-
-    energy -= energyCost;
-    updateUI();
-    busy = true;
-
-    animate(`🐜 Saliendo hacia zona ${type}`);
-    progressContainer.style.display = 'block';
-    progressBar.style.backgroundColor = 'purple';
-    progressBar.style.width = '0%';
-
-    const duration = dist * 400;
-    progressBar.style.transition = `width ${duration}ms linear`;
-    requestAnimationFrame(() => progressBar.style.width = '100%');
-
-    let risk = type === 'danger'?0.6:type === 'water' ? 0.2 : type === 'seed'?0.3:0.1;if(exploradoras > 0){risk *= 0.5;exploradoras--;log('🔎Una exploradora acompañó la misión, reduciendo el riesgo'); }
-
-
-    setTimeout(() => {
-      const fracaso = Math.random() < risk;
-      if (fracaso) {
-        animate('💀 La recolectora fue perdida');
-        log(`💀 La recolectora fue perdida en zona ${type}`);
-        busy = false;
-        progressContainer.style.display = 'none';
-        guardarEstado();
-        return;
+    // Funcionalidad del modal de ayuda
+    document.addEventListener('DOMContentLoaded', function() {
+      const modal = document.getElementById('helpModal');
+      const helpBtn = document.getElementById('helpBtn');
+      const closeBtn = document.querySelector('.close-btn');
+      const clearLogBtn = document.getElementById('clearLog');
+      
+      helpBtn.onclick = function() {
+        modal.style.display = 'block';
       }
-
-      animate('🐜 Recolectora regresando');
-      progressBar.style.backgroundColor = 'saddlebrown';
-      progressBar.style.width = '0%';
-      progressBar.style.transition = `width ${duration}ms linear`;
-      requestAnimationFrame(() => progressBar.style.width = '0%');
-
-      setTimeout(() => {
-        let gain = 0;
-        switch (type) {
-          case 'leaf': gain = Math.floor(Math.random() * 3) + 2; food += gain; break;
-          case 'seed': gain = Math.floor(Math.random() * 5) + 3; food += gain; break;
-          case 'water': log('💧 Agua encontrada'); break;
+      
+      closeBtn.onclick = function() {
+        modal.style.display = 'none';
+      }
+      
+      window.onclick = function(event) {
+        if (event.target == modal) {
+          modal.style.display = 'none';
         }
-        updateUI();
-        guardarEstado();
-        busy = false;
-        progressContainer.style.display = 'none';
-        if (gain > 0) {
-          log(`📦 Recolectó +${gain} (${type})`);
+      }
+      
+      if (clearLogBtn) {
+        clearLogBtn.onclick = function() {
+          const logElement = document.getElementById('log');
+          if (logElement) {
+            logElement.innerHTML = '';
+          }
         }
-      }, duration);
-    }, duration);
-  }
-
-  function trainFighter(){if(food<5)return log('No hay hojas suficientes.');food-=5;fighters++;updateUI();guardarEstado();log('Nuevo combatiente entrenado');}
-  function trainExplorer() {if (food < 2) return log('No hay hojas suficientes para exploradora');food -= 2;exploradoras++;updateUI();guardarEstado();log('Nueva exploradora entrenada');}
-  function trainWarrior() {if (food < 4) return log('No hay hojas suficientes para guerrera');food -= 4;guerreras++;updateUI();guardarEstado();log('Nueva guerrera entrenada');}
-  function feedQueen(){if(food<3||queenHP>=100)return log('No se puede alimentar.');food-=3;queenHP=Math.min(100,queenHP+15);updateUI();guardarEstado();log('Reina alimentada');}
-  function enemyAttack(){const dmg=Math.floor(Math.random()*20)+10;const defend=Math.min(dmg,fighters*10);queenHP=Math.max(0,queenHP-(dmg-defend));fighters=Math.max(0,fighters-Math.ceil(defend/10));updateUI();guardarEstado();log(`⚔️ Ataque enemigo! Daño ${dmg}, defendido ${defend}`);}
-
-  document.getElementById('btnCombatiente').onclick=trainFighter;
-  document.getElementById('btnAlimentar').onclick=feedQueen;
-  document.getElementById('btnAtaque').onclick=enemyAttack;
-  document.getElementById('btnExploradora').onclick = trainExplorer;
-  document.getElementById('btnGuerrera').onclick = trainWarrior;
-
-
-  setInterval(()=>{if(energy<100){energy=Math.min(100,energy+5);updateUI();guardarEstado();log('⚡ Energía recargada (+5)');}},3000);
-
-  generateMiniMap();
-  await cargarEstado();
-  updateUI();
-})();
-</script>
+      }
+    });
+  </script>
 </body>
 </html>

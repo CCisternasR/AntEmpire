@@ -8,7 +8,7 @@ STATIC_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "static"))
 USER_FILE  = os.path.join(BASE_DIR, "users.json")
 
 app = Flask(__name__, static_folder=STATIC_DIR, static_url_path="/static")
-app.secret_key = "tu_clave_secreta_cámbiala"   #  <-- necesaria para sesión
+app.secret_key = os.environ.get('SECRET_KEY', os.urandom(24).hex())   # Clave secreta segura
 CORS(app, supports_credentials=True)
 
 # ---------- Rutas básicas ----------

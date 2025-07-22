@@ -1,211 +1,411 @@
-:root {
-  --bg: #fefbe9;
-  --panel: #ffffff;
-  --primary: #4caf50;
-  --danger: #c0392b;
-  --font: 'Segoe UI', sans-serif;
-}
+/* juego.css - insect theme */
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  font-family: var(--font);
+:root {
+  --bg-page: #fcf9ed;
+  --bg-panel: #fff;
+  --border-panel: #a3c644;
+  --text-title: #4b3f2f;
+  --text-body: #2e2d24;
+  --btn-bg: #a3c644;
+  --btn-bg-hover: #798b31;
+  --btn-text: #fff;
+  --panel-bg-alt: #f4f1e7;
+  --progress-bg: #ddd;
+  --progress-fill: #d98827;
+  --ant-colors: #6c4a3b;
+  --danger-color: #c73939;
+  --water-color: #4b8bc7;
+  --seed-color: #d98827;
+  --leaf-color: #a3c644;
+  --danger-btn: #e74c3c;
+  --danger-btn-hover: #c0392b;
+  --modal-bg: rgba(0, 0, 0, 0.7);
+  --modal-content-bg: #fff;
 }
 
 body {
-  background: var(--bg);
-  padding: 20px;
+  background-color: var(--bg-page);
+  color: var(--text-body);
+  font-family: 'Segoe UI', sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+.welcome-message {
+  background-color: var(--ant-colors);
+  color: var(--btn-text);
+  padding: 0.5rem 1rem;
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
   align-items: center;
+}
+
+.welcome-message .controls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.welcome-message button {
+  background-color: var(--danger-btn);
+  color: #fff;
+  border: none;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.welcome-message button:hover {
+  background-color: var(--danger-btn-hover);
+}
+
+.help-btn {
+  background-color: var(--btn-bg) !important;
+  width: auto !important;
+  padding: 0.3rem 0.5rem !important;
+  font-size: 0.8rem !important;
+  margin-top: 0 !important;
+}
+
+header {
+  text-align: center;
+  padding: 1rem 0;
 }
 
 h1 {
   text-align: center;
-  margin-bottom: 5px;
-}
-#logoutBtn:hover {
-  background: #b71c1c;
-}
-#logoutBtn {
-  width: auto;
-  padding: 6px 12px;
-  font-size: 0.95rem;
-  background: #d32f2f;
-  border: none;
-  color: white;
-  border-radius: 6px;
-  cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-  transition: background 0.3s;
-}
-.version {
-  text-align: center;
-  font-size: 0.9rem;
-  color: #555;
-  margin-bottom: 10px;
+  color: var(--text-title);
+  margin: 0 0 0.25rem;
 }
 
-.dashboard {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-  justify-content: center;
+.version {
+  text-align: center;
+  color: var(--text-body);
+  margin-bottom: 1rem;
 }
 
 .card {
-  background: var(--panel);
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-  width: 240px;
+  background-color: var(--bg-panel);
+  border: 2px solid var(--border-panel);
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
 .card h2 {
-  margin-bottom: 10px;
-  font-size: 1.2rem;
+  color: var(--text-title);
+  margin-bottom: 0.75rem;
+}
+
+.resources-container {
+  margin-bottom: 1rem;
 }
 
 .resource {
-  font-size: 1.5rem;
-  margin-bottom: 6px;
-}
-
-button {
-  width: 100%;
-  margin-top: 10px;
-  padding: 10px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 1rem;
-  background: var(--primary);
-  color: #fff;
-  transition: background 0.3s;
-}
-
-button:hover {
-  background: #388e3c;
-}
-
-#queenBar {
-  width: 100%;
-  height: 18px;
-  border-radius: 8px;
-  background: #ddd;
-  overflow: hidden;
-  margin-top: 6px;
-}
-
-#queenHealth {
-  height: 100%;
-  background: var(--danger);
-  width: 100%;
-  transition: width 0.4s;
-}
-
-.log {
-  margin-top: 20px;
-  max-height: 140px;
-  overflow: auto;
-  background: #fafafa;
-  border-radius: 8px;
-  padding: 10px;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid #eee;
   font-size: 0.9rem;
-  width: 90%;
-  max-width: 600px;
+  display: flex;
+  justify-content: space-between;
 }
 
-#animationZone {
-  margin-top: 15px;
-  text-align: center;
-  min-height: 28px;
-  font-size: 1.05rem;
-  color: #333;
-  transition: opacity 0.3s;
-  width: 90%;
-  max-width: 600px;
+.resource-value {
+  font-weight: bold;
+}
+
+.colony-stats {
+  margin: 1rem 0;
+}
+
+.stat-item {
+  padding: 0.25rem 0;
+  font-size: 0.9rem;
+  display: flex;
+  justify-content: space-between;
+}
+
+.stat-value {
+  font-weight: bold;
+}
+
+button, .card button {
+  width: 100%;
+  background-color: var(--btn-bg);
+  color: var(--btn-text);
+  border: none;
+  padding: 0.6rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 0.5rem;
+}
+
+button:hover, .card button:hover {
+  background-color: var(--btn-bg-hover);
+  transform: translateY(-1px);
+}
+
+button:active, .card button:active {
+  transform: translateY(0);
+}
+
+.button-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.action-btn {
+  background-color: var(--btn-bg);
+}
+
+.action-btn:hover {
+  background-color: var(--btn-bg-hover);
+}
+
+.danger-btn {
+  background-color: var(--danger-btn);
+}
+
+.danger-btn:hover {
+  background-color: var(--danger-btn-hover);
+}
+
+.small-btn {
+  width: auto;
+  padding: 0.2rem 0.4rem;
+  font-size: 0.8rem;
+  margin: 0 0 0 0.5rem;
+  vertical-align: middle;
+}
+
+.map-legend {
+  font-size: 0.7rem;
+  opacity: 0.8;
+  margin-left: 0.5rem;
 }
 
 #miniMap {
+  width: 300px;
+  height: 300px;
+  background: var(--ant-colors);
+  padding: 2px;
+  border-radius: 8px;
   display: grid;
-  grid-template-columns: repeat(25, 8px);
-  grid-template-rows: repeat(25, 8px);
+  grid-template-columns: repeat(25, 1fr);
+  grid-template-rows: repeat(25, 1fr);
   gap: 1px;
-  margin-top: 15px;
-  background: #2e7d32;
-  padding: 4px;
-  border-radius: 6px;
-  box-shadow: 0 0 6px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  margin: 0 auto 1rem;
 }
 
 .miniTile {
-  width: 8px;
-  height: 8px;
-  background: #66bb6a;
-  cursor: pointer;
-  position: relative;
+  position: relative; /* para que el tooltip se posicione respecto a la celda */
+  transition: box-shadow 0.2s;
 }
 
-.miniTile.water { background: #4fc3f7; }
-.miniTile.seed { background: #fdd835; }
-.miniTile.leaf { background: #aed581; }
-.miniTile.danger { background: #ef5350; }
-.miniTile:hover { outline: 1px solid #000; }
+/* Se elimina la escala en hover para que no se deforme */
+.miniTile:hover {
+  box-shadow: 0 0 4px rgba(0,0,0,0.3);
+  z-index: 10;
+}
+
+.miniTile.leaf { background: var(--leaf-color); }
+.miniTile.seed { background: var(--seed-color); }
+.miniTile.water { background: var(--water-color); }
+.miniTile.danger { background: var(--danger-color); }
+.miniTile.anthill {
+  background: radial-gradient(circle at center, var(--danger-color) 30%, var(--ant-colors) 70%);
+  position: relative;
+}
+.miniTile.anthill::before {
+  content: '🐜';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.8rem;
+}
+
+#animationZone {
+  background: var(--panel-bg-alt);
+  border: 2px solid var(--border-panel);
+  border-radius: 4px;
+  padding: 0.75rem;
+  margin: 0 auto 1rem;
+  max-width: 300px;
+  text-align: center;
+}
+
+#progressBarContainer {
+  background: var(--progress-bg);
+  border-radius: 4px;
+  overflow: hidden;
+  width: 80%;
+  height: 10px;
+  margin: 0 auto 1rem;
+}
+
+#progressBar {
+  background: var(--progress-fill);
+  height: 100%;
+  width: 0%;
+  transition: width 0.3s;
+}
+
+.queen-status {
+  margin-bottom: 1rem;
+}
+
+#queenBar {
+  background: var(--progress-bg);
+  border-radius: 4px;
+  overflow: hidden;
+  width: 100%;
+  height: 12px;
+  margin: 0.5rem 0 1rem;
+}
+
+#queenHealth {
+  background: var(--danger-color);
+  height: 100%;
+  width: 100%;
+  transition: width 0.3s;
+}
+
+.log {
+  background: #fff;
+  border: 1px solid #ddd;
+  padding: 0.5rem;
+  height: 200px;
+  overflow-y: auto;
+  font-size: 0.85rem;
+  margin: 0 auto;
+  max-width: 300px;
+}
+
+.log div {
+  margin-bottom: 0.25rem;
+}
 
 .tooltip {
   position: absolute;
-  background: #000;
+  bottom: 100%;            /* justo encima de la tile */
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 4px;      /* separa un poco la flecha */
+  background: rgba(0,0,0,0.85);
   color: #fff;
-  padding: 2px 4px;
-  border-radius: 3px;
-  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.75rem;
   white-space: nowrap;
-  pointer-events: none;
-  transform: translate(-50%, -120%);
-  z-index: 10;
+  pointer-events: none;    /* para que no interfiera con el hover */
+  z-index: 20;
 }
-.welcome-message {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  margin-bottom: 20px;
-  font-size: 1rem;
+
+.tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;               /* justo debajo del tooltip */
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 4px;
+  border-style: solid;
+  border-color: rgba(0,0,0,0.85) transparent transparent transparent;
+}
+
+.dashboard {
+  display: grid;
+  grid-template-columns: 300px 1fr 300px;
+  gap: 1rem;
+  max-width: 1200px;
+  margin: 1rem auto;
+  padding: 0 1rem;
+}
+
+/* Modal de ayuda */
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--modal-bg);
+  z-index: 100;
+  overflow: auto;
+}
+
+.modal-content {
+  background-color: var(--modal-content-bg);
+  margin: 10% auto;
+  padding: 1.5rem;
+  border-radius: 8px;
+  max-width: 600px;
+  position: relative;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+
+.close-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 1rem;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #777;
+  background: none;
+  border: none;
+  width: auto;
+  margin: 0;
+  padding: 0;
+}
+
+.close-btn:hover {
   color: #333;
 }
 
-#welcome button {
-  background-color: #d32f2f;
-  border: none;
-  color: white;
-  padding: 6px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: background 0.3s;
-}
-#progressBarContainer {
-  width: 100px;
-  height: 10px;
-  margin: 10px auto;
-  border: 1px solid #444;
-  background-color: #eee;
-  display: none; /* <-- oculto por defecto */
+.help-content h3 {
+  color: var(--text-title);
+  margin: 1rem 0 0.5rem;
 }
 
-#introVideo {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  z-index: 9999;
-  background: black;
+.help-content p, .help-content ul {
+  margin-bottom: 1rem;
 }
 
-#welcome button:hover {
-  background-color: #b71c1c;
+.help-content li {
+  margin-bottom: 0.5rem;
 }
 
+.leaf-icon, .seed-icon, .water-icon, .danger-icon {
+  display: inline-block;
+  width: 1.2em;
+  text-align: center;
+}
+
+/* Responsive design */
+@media (max-width: 1024px) {
+  .dashboard {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+  }
+  
+  .modal-content {
+    margin: 5% auto;
+    width: 90%;
+  }
+}
+
+@media (max-width: 600px) {
+  #miniMap {
+    width: 250px;
+    height: 250px;
+  }
+  
+  .map-legend {
+    display: block;
+    margin-top: 0.3rem;
+    margin-left: 0;
+  }
+}
