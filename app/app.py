@@ -20,6 +20,12 @@ def root():
 def juego():
     return app.send_static_file("juego.html")
 
+@app.route("/defense.html")
+def defense():
+    return app.send_static_file("defense.html")
+
+# Rutas para sprites eliminadas
+
 # ---------- Login / registro ----------
 def load_users():
     if not os.path.exists(USER_FILE): return {}

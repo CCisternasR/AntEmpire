@@ -66,7 +66,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   function animate(txt){elAnim.textContent=txt;elAnim.style.opacity=1;}
   async function cargarEstado(){const r=await fetch('/cargar_estado');if(r.ok){const d=await r.json();
     if(d.food!==undefined){food=d.food;fighters=d.fighters;energy=d.energy;queenHP=d.queenHP;
-        levelExplorer=d.levelExplorer||1;levelFighter=d.levelFighter||1;levelQueen=d.levelQueen||1;levelCombat=d.levelCombat||1;}}}
+        levelExplorer=d.levelExplorer||1;levelFighter=d.levelFighter||1;levelQueen=d.levelQueen||1;levelCombat=d.levelCombat||1;}};
+    
+    // Verificar si hay recompensas del Tower Defense
+    const towerDefenseReward = localStorage.getItem('towerDefenseReward');
+    if (towerDefenseReward) {
+      const reward = parseInt(towerDefenseReward);
+      if (!isNaN(reward) && reward > 0) {
+        food += reward;
+        log(`🎮 Recompensa de Tower Defense: +${reward} hojas`);
+        localStorage.removeItem('towerDefenseReward');
+        guardarEstado();
+      }
+    }
+  }
   function guardarEstado(){fetch('/guardar_estado',{method:'POST',headers:{'Content-Type':'application/json'},
   body:JSON.stringify({food,fighters,energy,queenHP,exploradoras, guerreras,levelExplorer, levelFighter, levelQueen, levelCombat})});}
 

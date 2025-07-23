@@ -1,4 +1,4 @@
-/* juego.css - insect theme */
+/* defense.css - Tower Defense theme */
 
 :root {
   --bg-page: #fcf9ed;
@@ -21,6 +21,15 @@
   --danger-btn-hover: #c0392b;
   --modal-bg: rgba(0, 0, 0, 0.7);
   --modal-content-bg: #fff;
+  --health-bar: #2ecc71;
+  --health-bar-low: #e74c3c;
+  --tower-basic: #a3c644;
+  --tower-shooter: #3498db;
+  --tower-bomber: #e67e22;
+  --enemy-basic: #e74c3c;
+  --enemy-fast: #9b59b6;
+  --enemy-boss: #34495e;
+  --path-color: #d2b48c;
 }
 
 body {
@@ -59,7 +68,7 @@ body {
   background-color: var(--danger-btn-hover);
 }
 
-.help-btn {
+.help-btn, .back-btn {
   background-color: var(--btn-bg) !important;
   width: auto !important;
   padding: 0.3rem 0.5rem !important;
@@ -113,21 +122,6 @@ h1 {
   font-weight: bold;
 }
 
-.colony-stats {
-  margin: 1rem 0;
-}
-
-.stat-item {
-  padding: 0.25rem 0;
-  font-size: 0.9rem;
-  display: flex;
-  justify-content: space-between;
-}
-
-.stat-value {
-  font-weight: bold;
-}
-
 button, .card button {
   width: 100%;
   background-color: var(--btn-bg);
@@ -150,10 +144,17 @@ button:active, .card button:active {
   transform: translateY(0);
 }
 
+button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .button-group {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  margin-top: 1rem;
 }
 
 .action-btn {
@@ -172,15 +173,6 @@ button:active, .card button:active {
   background-color: var(--danger-btn-hover);
 }
 
-.special-btn {
-  background-color: #9b59b6;
-  margin-top: 1rem;
-}
-
-.special-btn:hover {
-  background-color: #8e44ad;
-}
-
 .small-btn {
   width: auto;
   padding: 0.2rem 0.4rem;
@@ -189,151 +181,180 @@ button:active, .card button:active {
   vertical-align: middle;
 }
 
-.map-legend {
-  font-size: 0.7rem;
-  opacity: 0.8;
-  margin-left: 0.5rem;
-}
-
-#miniMap {
-  width: 300px;
-  height: 300px;
-  background: var(--ant-colors);
-  padding: 2px;
-  border-radius: 8px;
-  display: grid;
-  grid-template-columns: repeat(25, 1fr);
-  grid-template-rows: repeat(25, 1fr);
-  gap: 1px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-  margin: 0 auto 1rem;
-}
-
-.miniTile {
-  position: relative; /* para que el tooltip se posicione respecto a la celda */
-  transition: box-shadow 0.2s;
-}
-
-/* Se elimina la escala en hover para que no se deforme */
-.miniTile:hover {
-  box-shadow: 0 0 4px rgba(0,0,0,0.3);
-  z-index: 10;
-}
-
-.miniTile.leaf { background: var(--leaf-color); }
-.miniTile.seed { background: var(--seed-color); }
-.miniTile.water { background: var(--water-color); }
-.miniTile.danger { background: var(--danger-color); }
-.miniTile.anthill {
-  background: radial-gradient(circle at center, var(--danger-color) 30%, var(--ant-colors) 70%);
-  position: relative;
-}
-.miniTile.anthill::before {
-  content: '🐜';
-  position: absolute;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 0.8rem;
-}
-
-#animationZone {
-  background: var(--panel-bg-alt);
-  border: 2px solid var(--border-panel);
-  border-radius: 4px;
-  padding: 0.75rem;
-  margin: 0 auto 1rem;
-  max-width: 300px;
-  text-align: center;
-}
-
-#progressBarContainer {
-  background: var(--progress-bg);
-  border-radius: 4px;
-  overflow: hidden;
-  width: 80%;
-  height: 10px;
-  margin: 0 auto 1rem;
-}
-
-#progressBar {
-  background: var(--progress-fill);
-  height: 100%;
-  width: 0%;
-  transition: width 0.3s;
-}
-
-.queen-status {
-  margin-bottom: 1rem;
-}
-
-#queenBar {
-  background: var(--progress-bg);
-  border-radius: 4px;
-  overflow: hidden;
-  width: 100%;
-  height: 12px;
-  margin: 0.5rem 0 1rem;
-}
-
-#queenHealth {
-  background: var(--danger-color);
-  height: 100%;
-  width: 100%;
-  transition: width 0.3s;
-}
-
-.log {
-  background: #fff;
-  border: 1px solid #ddd;
-  padding: 0.5rem;
-  height: 200px;
-  overflow-y: auto;
-  font-size: 0.85rem;
-  margin: 0 auto;
-  max-width: 300px;
-}
-
-.log div {
-  margin-bottom: 0.25rem;
-}
-
-.tooltip {
-  position: absolute;
-  bottom: 100%;            /* justo encima de la tile */
-  left: 50%;
-  transform: translateX(-50%);
-  margin-bottom: 4px;      /* separa un poco la flecha */
-  background: rgba(0,0,0,0.85);
-  color: #fff;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  white-space: nowrap;
-  pointer-events: none;    /* para que no interfiera con el hover */
-  z-index: 20;
-}
-
-.tooltip::after {
-  content: '';
-  position: absolute;
-  top: 100%;               /* justo debajo del tooltip */
-  left: 50%;
-  transform: translateX(-50%);
-  border-width: 4px;
-  border-style: solid;
-  border-color: rgba(0,0,0,0.85) transparent transparent transparent;
-}
-
 .dashboard {
   display: grid;
-  grid-template-columns: 300px 1fr 300px;
+  grid-template-columns: 250px 1fr 250px;
   gap: 1rem;
   max-width: 1200px;
   margin: 1rem auto;
   padding: 0 1rem;
 }
 
-/* Modal de ayuda */
+/* Game Canvas Styles */
+#gameContainer {
+  position: relative;
+  width: 600px;
+  height: 400px;
+  margin: 0 auto;
+  border: 2px solid var(--border-panel);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+#gameCanvas {
+  background-color: #f5f5dc; /* Beige background */
+  display: block;
+}
+
+#gameOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  z-index: 10;
+}
+
+#gameMessage {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  text-align: center;
+  padding: 0 1rem;
+}
+
+#startGameBtn {
+  width: auto;
+  padding: 0.8rem 1.5rem;
+  font-size: 1rem;
+}
+
+.game-controls {
+  margin: 1rem 0;
+}
+
+.health-bar {
+  margin-bottom: 1rem;
+}
+
+.health-bar-container {
+  width: 100%;
+  height: 15px;
+  background-color: var(--progress-bg);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 0.25rem;
+}
+
+#healthBarFill {
+  height: 100%;
+  width: 100%;
+  background-color: var(--health-bar);
+  transition: width 0.3s, background-color 0.3s;
+}
+
+.log-container {
+  margin-top: 1rem;
+}
+
+.log-container h3 {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.log {
+  background: #fff;
+  border: 1px solid #ddd;
+  padding: 0.5rem;
+  height: 100px;
+  overflow-y: auto;
+  font-size: 0.85rem;
+}
+
+.log div {
+  margin-bottom: 0.25rem;
+}
+
+/* Tower Styles */
+.towers-container {
+  margin-bottom: 1rem;
+}
+
+.tower-option {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+  cursor: grab;
+  background-color: var(--bg-panel);
+  transition: all 0.2s;
+}
+
+.tower-option:hover {
+  background-color: var(--panel-bg-alt);
+  transform: translateY(-2px);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.tower-option:active {
+  cursor: grabbing;
+}
+
+.tower-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 50%;
+  margin-right: 0.5rem;
+  font-size: 1.2rem;
+}
+
+.basic-tower {
+  background-color: var(--tower-basic);
+}
+
+.shooter-tower {
+  background-color: var(--tower-shooter);
+}
+
+.bomber-tower {
+  background-color: var(--tower-bomber);
+}
+
+.tower-info {
+  flex: 1;
+}
+
+.tower-name {
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+.tower-cost {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+/* Tower Info Panel */
+#towerInfo, #upgradePanel {
+  background-color: var(--panel-bg-alt);
+  padding: 0.75rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  min-height: 100px;
+}
+
+/* Modal Styles */
 .modal {
   display: none;
   position: fixed;
@@ -379,7 +400,7 @@ button:active, .card button:active {
   margin: 1rem 0 0.5rem;
 }
 
-.help-content p, .help-content ul {
+.help-content p, .help-content ul, .help-content ol {
   margin-bottom: 1rem;
 }
 
@@ -387,34 +408,35 @@ button:active, .card button:active {
   margin-bottom: 0.5rem;
 }
 
-.leaf-icon, .seed-icon, .water-icon, .danger-icon {
-  display: inline-block;
-  width: 1.2em;
-  text-align: center;
-}
-
-/* Responsive design */
-@media (max-width: 1024px) {
+/* Responsive Design */
+@media (max-width: 1200px) {
   .dashboard {
     grid-template-columns: 1fr;
     grid-template-rows: auto auto auto;
   }
   
-  .modal-content {
-    margin: 5% auto;
-    width: 90%;
+  #gameContainer {
+    width: 100%;
+    max-width: 600px;
+    height: auto;
+    aspect-ratio: 3/2;
+  }
+  
+  #gameCanvas {
+    width: 100%;
+    height: 100%;
   }
 }
 
-@media (max-width: 600px) {
-  #miniMap {
-    width: 250px;
-    height: 250px;
+@media (max-width: 650px) {
+  .towers-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
   }
   
-  .map-legend {
-    display: block;
-    margin-top: 0.3rem;
-    margin-left: 0;
+  .tower-option {
+    width: calc(50% - 0.5rem);
+    margin-bottom: 0;
   }
 }
