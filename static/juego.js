@@ -12,8 +12,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   elLog.innerHTML = '';                      // limpia cualquier resto
   progressContainer.style.display = 'none';  // oculta la barra
   progressBar.style.width = '0%';            // asegúrate que empiece vacía
-
-  // ... aquí sigue el resto de tu lógica (cargar estado, generar minimapa, etc.) ...
 });
 // Este código es el núcleo del juego, maneja la lógica de recolectar recursos, entrenar hormigas y combatir enemigos.
 // Se encarga de la interacción del usuario, actualiza el estado del juego y muestra animaciones.
@@ -182,19 +180,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.location.href='/defense.html';
   };
   
+  // Recarga de energía automática
+  setInterval(()=>{if(energy<100){energy=Math.min(100,energy+5);updateUI();guardarEstado();log('⚡ Energía recargada (+5)');}},3000);
+  
   // Inicializar el juego
   await cargarEstado();
   generateMiniMap();
   updateUI();
   log('Juego iniciado');
-})();nAtaque').onclick=enemyAttack;
-  document.getElementById('btnExploradora').onclick = trainExplorer;
-  document.getElementById('btnGuerrera').onclick = trainWarrior;
-
-
-  setInterval(()=>{if(energy<100){energy=Math.min(100,energy+5);updateUI();guardarEstado();log('⚡ Energía recargada (+5)');}},3000);
-
-  generateMiniMap();
-  await cargarEstado();
-  updateUI();
 })();
