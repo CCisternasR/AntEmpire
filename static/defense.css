@@ -193,8 +193,8 @@ button:disabled {
 /* Game Canvas Styles */
 #gameContainer {
   position: relative;
-  width: 600px;
-  height: 400px;
+  width: 800px;
+  height: 500px;
   margin: 0 auto;
   border: 2px solid var(--border-panel);
   border-radius: 8px;
@@ -296,6 +296,24 @@ button:disabled {
   cursor: grab;
   background-color: var(--bg-panel);
   transition: all 0.2s;
+}
+
+.tower-option.locked, .tower-select-btn.locked {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: #f0f0f0;
+  border: 1px dashed #ccc;
+  position: relative;
+}
+
+.tower-option.locked::after, .tower-select-btn.locked::after {
+  content: '🔒';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.2rem;
+  z-index: 2;
 }
 
 .tower-option:hover {
@@ -416,39 +434,165 @@ button:disabled {
   margin-bottom: 0.5rem;
 }
 
-/* Tower Selection Panel */
-.tower-selection-panel {
-  position: absolute;
-  bottom: 10px;
-  left: 50%;
-  transform: translateX(-50%);
+/* Toolbar Panel */
+.toolbar-panel {
   display: flex;
-  gap: 10px;
-  background-color: rgba(0, 0, 0, 0.6);
-  padding: 10px;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 8px;
   border-radius: 8px;
-  z-index: 5;
+  margin: 10px 0;
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  gap: 15px;
 }
 
-.tower-select-btn {
+.toolbar-towers {
+  width: 280px;
+  flex-shrink: 0;
+}
+
+.towers-scroll-container {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.3) transparent;
+}
+
+.towers-scroll-container::-webkit-scrollbar {
+  height: 4px;
+}
+
+.towers-scroll-container::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.1);
+  border-radius: 2px;
+}
+
+.towers-scroll-container::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.3);
+  border-radius: 2px;
+}
+
+.towers-scroll-content {
+  display: flex;
+  gap: 6px;
+  padding-bottom: 4px;
+}
+
+.toolbar-info {
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  padding-left: 15px;
+  border-left: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.toolbar-current-info,
+.toolbar-upgrade-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.toolbar-info-title {
+  font-size: 0.7rem;
+  opacity: 0.8;
+  margin-bottom: 2px;
+  text-transform: uppercase;
+  font-weight: bold;
+}
+
+.toolbar-info-content {
+  font-size: 0.75rem;
+  line-height: 1.2;
+}
+
+.toolbar-upgrade-info {
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
+  padding-left: 10px;
+}
+
+.toolbar-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  justify-content: center;
+  margin-left: 10px;
+}
+
+.toolbar-action-btn {
+  padding: 3px 6px;
+  font-size: 0.65rem;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  background-color: var(--btn-bg);
+  color: white;
+  transition: all 0.2s;
+  min-width: 50px;
+}
+
+.toolbar-action-btn:hover:not(:disabled) {
+  background-color: var(--btn-bg-hover);
+}
+
+.toolbar-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.toolbar-action-btn.danger {
+  background-color: var(--danger-btn);
+}
+
+.toolbar-action-btn.danger:hover:not(:disabled) {
+  background-color: var(--danger-btn-hover);
+}
+
+.toolbar-btn {
   display: flex;
   flex-direction: column;
   align-items: center;
   cursor: pointer;
-  padding: 5px;
-  border-radius: 5px;
+  padding: 6px 4px;
+  border-radius: 6px;
   transition: all 0.2s;
-}
-
-.tower-select-btn.selected {
-  background-color: rgba(255, 255, 255, 0.3);
-  box-shadow: 0 0 5px white;
-}
-
-.tower-select-btn span {
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  min-width: 40px;
+  width: 40px;
+  min-height: 50px;
+  justify-content: center;
   color: white;
-  font-size: 0.8rem;
-  margin-top: 5px;
+  flex-shrink: 0;
+}
+
+.toolbar-btn.selected {
+  background-color: rgba(163, 198, 68, 0.8);
+  box-shadow: 0 0 10px rgba(163, 198, 68, 0.6);
+  border-color: rgba(163, 198, 68, 1);
+  transform: translateY(-2px);
+}
+
+.toolbar-btn span {
+  color: white;
+  font-size: 0.7rem;
+  margin-top: 2px;
+  font-weight: bold;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.toolbar-icon {
+  font-size: 1.2rem;
+  margin-bottom: 2px;
+}
+
+.toolbar-btn:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
 }
 
 /* Wave Timer */
@@ -457,12 +601,128 @@ button:disabled {
   top: 10px;
   left: 50%;
   transform: translateX(-50%);
-  background-color: rgba(0, 0, 0, 0.6);
+  background-color: rgba(0, 0, 0, 0.8);
   color: white;
-  padding: 5px 10px;
-  border-radius: 5px;
+  padding: 6px 12px;
+  border-radius: 8px;
   font-size: 0.9rem;
   z-index: 5;
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Weather Indicator */
+.weather-indicator {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.weather-icon {
+  font-size: 1.2rem;
+}
+
+.weather-name {
+  font-weight: bold;
+}
+
+/* Map Resources Indicator */
+.map-resources {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  z-index: 5;
+  display: flex;
+  gap: 15px;
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.map-resources span {
+  font-weight: bold;
+}
+
+/* Mobile Controls */
+.mobile-controls {
+  position: absolute;
+  top: 50px;
+  right: 10px;
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  z-index: 5;
+}
+
+.mobile-btn {
+  background-color: var(--btn-bg);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  margin: 0;
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.mobile-speed {
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  text-align: center;
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Tech Tree */
+.tech-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.tech-option {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.tech-level {
+  font-size: 1.2rem;
+  letter-spacing: 2px;
+}
+
+.tech-btn {
+  padding: 5px;
+  font-size: 0.8rem;
+}
+
+.tech-points {
+  font-size: 0.9rem;
+  background-color: rgba(0, 0, 0, 0.1);
+  padding: 2px 6px;
+  border-radius: 10px;
+  margin-left: 5px;
 }
 
 /* Tower Context Menu */
@@ -523,9 +783,11 @@ button:disabled {
   
   #gameContainer {
     width: 100%;
-    max-width: 600px;
+    max-width: 800px;
     height: auto;
-    aspect-ratio: 3/2;
+    aspect-ratio: 8/5;
+    position: relative;
+    overflow: hidden;
   }
   
   #gameCanvas {
@@ -540,6 +802,10 @@ button:disabled {
     padding: 0.5rem;
     gap: 0.5rem;
     margin-bottom: 60px; /* Space for mobile panel */
+  }
+  
+  .mobile-controls {
+    display: flex;
   }
   
   .card {
@@ -570,25 +836,37 @@ button:disabled {
     display: flex;
   }
   
-  /* Hide sidebar on mobile */
+  /* Adjust sidebar on mobile */
   .dashboard > aside:first-child,
   .dashboard > aside:last-child {
     display: none;
   }
   
-  /* Make tower selection panel bigger on mobile */
+  /* Add fixed controls for mobile */
+  .mobile-panel {
+    padding: 8px;
+    display: flex;
+    justify-content: space-around;
+  }
+  
+  /* Make tower selection panel better on mobile */
   .tower-selection-panel {
-    padding: 15px;
+    padding: 8px;
+    bottom: 5px;
   }
   
   .tower-select-btn {
-    padding: 8px;
+    padding: 5px;
   }
   
   .tower-icon {
-    width: 50px;
-    height: 50px;
-    font-size: 1.5rem;
+    width: 36px;
+    height: 36px;
+    font-size: 1.2rem;
+  }
+  
+  .tower-select-btn span {
+    font-size: 0.8rem;
   }
   
   .tower-select-btn span {

@@ -2,7 +2,7 @@
 document.addEventListener('DOMContentLoaded', function() {
   // Cargar la imagen de la torre básica o usar un fallback
   const torreBasica = new Image();
-  torreBasica.src = 'static/images/torreBasica.png';
+  torreBasica.src = '/static/images/torreBasica.png';
   
   // Variable para controlar si la imagen se cargó correctamente
   let imagenCargada = false;
@@ -38,12 +38,65 @@ document.addEventListener('DOMContentLoaded', function() {
   const healthValue = document.getElementById('healthValue');
   const healthBarFill = document.getElementById('healthBarFill');
   
+  // Weather System
+  const weatherTypes = {
+    normal: {
+      name: "Normal",
+      description: "Clima estándar sin efectos especiales",
+      color: "#f5f5f5",
+      duration: 120, // segundos
+      effects: {}
+    },
+    sunny: {
+      name: "Soleado",
+      description: "Potencia torres de fuego (+30% daño) y escarabajos (+20% velocidad), debilita torres de hielo (-20% daño)",
+      color: "#f39c12",
+      duration: 60,
+      effects: {
+        towerBuffs: { fuego: 0.3 },
+        towerDebuffs: { hielo: -0.2 },
+        enemyBuffs: { "basic": { speed: 0.2 } }
+      }
+    },
+    rainy: {
+      name: "Lluvioso",
+      description: "Potencia torres de veneno (+25% daño) y debilita torres de fuego (-20% daño)",
+      color: "#3498db",
+      duration: 60,
+      effects: {
+        towerBuffs: { veneno: 0.25 },
+        towerDebuffs: { fuego: -0.2 }
+      }
+    },
+    cold: {
+      name: "Frío",
+      description: "Potencia torres de hielo (+30% daño) y debilita torres de fuego (-15% daño)",
+      color: "#2980b9",
+      duration: 60,
+      effects: {
+        towerBuffs: { hielo: 0.3 },
+        towerDebuffs: { fuego: -0.15 },
+        enemyDebuffs: { global: { speed: -0.1 } }
+      }
+    },
+    foggy: {
+      name: "Niebla",
+      description: "Reduce el rango de todas las torres (-15%) pero aumenta el daño (+10%)",
+      color: "#bdc3c7",
+      duration: 45,
+      effects: {
+        towerDebuffs: { global: { range: -0.15 } },
+        towerBuffs: { global: { damage: 0.1 } }
+      }
+    }
+  };
+  
   // Game State
   let gameState = {
     isPlaying: false,
     isPaused: false,
     isWaveActive: false,
-    gameSpeed: 1,
+    gameSpeed: 10, // Velocidad 10 por defecto
     resources: 50,
     score: 0,
     wave: 1,
@@ -60,12 +113,41 @@ document.addEventListener('DOMContentLoaded', function() {
     enemiesSpawned: 0,
     enemiesPerWave: 10,
     waveCompleted: false,
-    waveTimer: 30, // Temporizador para la próxima oleada
+    waveTimer: 3, // Temporizador reducido a 3 segundos
     showRangePreview: false, // Para mostrar la previsualización del rango
     rangePreviewX: 0,
     rangePreviewY: 0,
-    rangePreviewRadius: 0
+    rangePreviewRadius: 0,
+    currentWeather: "normal",
+    weatherTimer: 0,
+    weatherDuration: 120,
+    techPoints: 0,
+    unlockedTowers: ["basic", "shooter", "bomber", "poison", "fire", "ice", "carnivore", "queen"],
+    techTree: {
+      damage: 0, // Nivel de mejora de daño
+      range: 0,  // Nivel de mejora de rango
+      speed: 0   // Nivel de mejora de velocidad de ataque
+    },
+    playerPerformance: {
+      totalKills: 0,
+      totalWaves: 0,
+      flawlessWaves: 0,
+      bossesDefeated: 0
+    },
+    specialEvents: {
+      bossRaid: false,
+      lastEventWave: 0
+    }
   };
+  
+  // Cargar torres desbloqueadas desde localStorage (desactivado para mostrar todas)
+  const loadUnlockedTowers = () => {
+    // Función desactivada - usar torres por defecto
+    console.log("Torres disponibles:", gameState.unlockedTowers);
+  };
+  
+  // Cargar torres desbloqueadas al inicio
+  loadUnlockedTowers();
   
   // Game Map
   const map = {
@@ -73,37 +155,147 @@ document.addEventListener('DOMContentLoaded', function() {
     height: canvas.height,
     tileSize: 40,
     path: [],
-    startPoint: { x: 0, y: 5 },
-    endPoint: { x: 14, y: 5 }
+    startPoint: { x: 0, y: 6 },
+    endPoint: { x: 19, y: 6 },
+    gridWidth: 20,
+    gridHeight: 12
   };
   
-  // Generate path from start to end
-  function generatePath() {
+  // Generate random path from start to end
+  function generateRandomPath() {
     map.path = [];
     
-    // Start with a simple path
-    let currentX = map.startPoint.x;
-    let currentY = map.startPoint.y;
+    // Random start and end points
+    const sides = ['left', 'right', 'top', 'bottom'];
+    const startSide = sides[Math.floor(Math.random() * sides.length)];
+    let endSide;
     
-    // Add start point
-    map.path.push({ x: currentX * map.tileSize, y: currentY * map.tileSize });
+    // Ensure end is on opposite side
+    do {
+      endSide = sides[Math.floor(Math.random() * sides.length)];
+    } while (endSide === startSide);
     
-    // Create a zigzag path
-    const waypoints = [
-      { x: 2, y: 5 },
-      { x: 2, y: 2 },
-      { x: 5, y: 2 },
-      { x: 5, y: 8 },
-      { x: 8, y: 8 },
-      { x: 8, y: 3 },
-      { x: 12, y: 3 },
-      { x: 12, y: 5 },
-      { x: map.endPoint.x, y: map.endPoint.y }
-    ];
+    // Set start point
+    switch(startSide) {
+      case 'left':
+        map.startPoint = { x: 0, y: Math.floor(Math.random() * (map.gridHeight - 2)) + 1 };
+        break;
+      case 'right':
+        map.startPoint = { x: map.gridWidth - 1, y: Math.floor(Math.random() * (map.gridHeight - 2)) + 1 };
+        break;
+      case 'top':
+        map.startPoint = { x: Math.floor(Math.random() * (map.gridWidth - 2)) + 1, y: 0 };
+        break;
+      case 'bottom':
+        map.startPoint = { x: Math.floor(Math.random() * (map.gridWidth - 2)) + 1, y: map.gridHeight - 1 };
+        break;
+    }
     
+    // Set end point
+    switch(endSide) {
+      case 'left':
+        map.endPoint = { x: 0, y: Math.floor(Math.random() * (map.gridHeight - 2)) + 1 };
+        break;
+      case 'right':
+        map.endPoint = { x: map.gridWidth - 1, y: Math.floor(Math.random() * (map.gridHeight - 2)) + 1 };
+        break;
+      case 'top':
+        map.endPoint = { x: Math.floor(Math.random() * (map.gridWidth - 2)) + 1, y: 0 };
+        break;
+      case 'bottom':
+        map.endPoint = { x: Math.floor(Math.random() * (map.gridWidth - 2)) + 1, y: map.gridHeight - 1 };
+        break;
+    }
+    
+    // Generate path using A* like algorithm
+    const waypoints = generateWaypoints(map.startPoint, map.endPoint);
+    
+    // Convert waypoints to pixel coordinates
     waypoints.forEach(point => {
-      map.path.push({ x: point.x * map.tileSize, y: point.y * map.tileSize });
+      map.path.push({ x: point.x * map.tileSize + map.tileSize/2, y: point.y * map.tileSize + map.tileSize/2 });
     });
+  }
+  
+  // Generate waypoints between start and end
+  function generateWaypoints(start, end) {
+    const waypoints = [start];
+    let current = { ...start };
+    
+    // Create 2-4 intermediate waypoints for interesting paths
+    const numWaypoints = Math.floor(Math.random() * 3) + 2;
+    
+    for (let i = 0; i < numWaypoints; i++) {
+      const progress = (i + 1) / (numWaypoints + 1);
+      
+      // Interpolate towards end with some randomness
+      const targetX = Math.floor(start.x + (end.x - start.x) * progress);
+      const targetY = Math.floor(start.y + (end.y - start.y) * progress);
+      
+      // Add some randomness but keep within bounds
+      const randomOffsetX = Math.floor(Math.random() * 4) - 2;
+      const randomOffsetY = Math.floor(Math.random() * 4) - 2;
+      
+      const newX = Math.max(1, Math.min(map.gridWidth - 2, targetX + randomOffsetX));
+      const newY = Math.max(1, Math.min(map.gridHeight - 2, targetY + randomOffsetY));
+      
+      // Create path from current to new waypoint
+      const pathSegment = createPathSegment(current, { x: newX, y: newY });
+      waypoints.push(...pathSegment.slice(1)); // Skip first point to avoid duplicates
+      
+      current = { x: newX, y: newY };
+    }
+    
+    // Connect to end point
+    const finalSegment = createPathSegment(current, end);
+    waypoints.push(...finalSegment.slice(1));
+    
+    return waypoints;
+  }
+  
+  // Create path segment between two points
+  function createPathSegment(start, end) {
+    const segment = [start];
+    let current = { ...start };
+    
+    while (current.x !== end.x || current.y !== end.y) {
+      // Move towards target
+      if (current.x < end.x) current.x++;
+      else if (current.x > end.x) current.x--;
+      else if (current.y < end.y) current.y++;
+      else if (current.y > end.y) current.y--;
+      
+      segment.push({ ...current });
+    }
+    
+    return segment;
+  }
+  
+  // Generate new random map
+  function generateNewMap() {
+    // Clear existing towers and enemies
+    gameState.towers = [];
+    gameState.enemies = [];
+    gameState.projectiles = [];
+    
+    // Reset game state
+    gameState.isWaveActive = false;
+    gameState.waveCompleted = false;
+    gameState.enemiesSpawned = 0;
+    gameState.wave = 1;
+    gameState.waveTimer = 3;
+    
+    // Generate new path
+    generateRandomPath();
+    
+    // Update displays
+    updateResourceDisplay();
+    logMessage('¡Nuevo mapa generado! Coloca tus torres estratégicamente.');
+    
+    // Enable start wave button
+    startWaveBtn.disabled = false;
+    
+    // Hide wave timer
+    document.getElementById('waveTimer').style.display = 'none';
   }
   
   // Tower Types
@@ -117,7 +309,9 @@ document.addEventListener('DOMContentLoaded', function() {
       projectileSpeed: 5,
       color: '#a3c644',
       upgradeCost: 5,
-      upgradeMultiplier: 1.2
+      upgradeMultiplier: 1.2,
+      element: "normal",
+      rarity: "común"
     },
     shooter: {
       name: "Hormiga Arquera",
@@ -128,7 +322,9 @@ document.addEventListener('DOMContentLoaded', function() {
       projectileSpeed: 8,
       color: '#3498db',
       upgradeCost: 10,
-      upgradeMultiplier: 1.3
+      upgradeMultiplier: 1.3,
+      element: "normal",
+      rarity: "común"
     },
     bomber: {
       name: "Hormiga Bombardera",
@@ -141,7 +337,87 @@ document.addEventListener('DOMContentLoaded', function() {
       areaEffect: true,
       areaRadius: 50,
       upgradeCost: 15,
-      upgradeMultiplier: 1.4
+      upgradeMultiplier: 1.4,
+      element: "normal",
+      rarity: "rara"
+    },
+    poison: {
+      name: "Hormiga Venenosa",
+      cost: 25,
+      damage: 8,
+      range: 110,
+      fireRate: 0.7,
+      projectileSpeed: 6,
+      color: '#2ecc71',
+      upgradeCost: 12,
+      upgradeMultiplier: 1.3,
+      poisonEffect: true,
+      poisonDamage: 2,
+      poisonDuration: 3, // segundos
+      element: "veneno",
+      rarity: "rara"
+    },
+    fire: {
+      name: "Hormiga de Fuego",
+      cost: 35,
+      damage: 20,
+      range: 90,
+      fireRate: 0.6,
+      projectileSpeed: 7,
+      color: '#e74c3c',
+      upgradeCost: 18,
+      upgradeMultiplier: 1.4,
+      burnEffect: true,
+      burnDamage: 5,
+      burnDuration: 2, // segundos
+      element: "fuego",
+      rarity: "rara"
+    },
+    ice: {
+      name: "Hormiga de Hielo",
+      cost: 35,
+      damage: 12,
+      range: 100,
+      fireRate: 0.7,
+      projectileSpeed: 6,
+      color: '#3498db',
+      upgradeCost: 18,
+      upgradeMultiplier: 1.3,
+      freezeEffect: true,
+      slowFactor: 0.5, // 50% más lento
+      freezeDuration: 2, // segundos
+      element: "hielo",
+      rarity: "rara"
+    },
+    carnivore: {
+      name: "Hormiga Carnívora",
+      cost: 50,
+      damage: 40,
+      range: 80,
+      fireRate: 0.4,
+      projectileSpeed: 5,
+      color: '#9b59b6',
+      upgradeCost: 25,
+      upgradeMultiplier: 1.5,
+      devourChance: 0.1, // 10% de devorar al enemigo
+      element: "normal",
+      rarity: "mítica"
+    },
+    queen: {
+      name: "Hormiga Reina",
+      cost: 100,
+      damage: 15,
+      range: 150,
+      fireRate: 1.2,
+      projectileSpeed: 8,
+      color: '#f1c40f',
+      upgradeCost: 50,
+      upgradeMultiplier: 1.6,
+      spawnRate: 0.05, // 5% de generar una hormiga soldado
+      auraRange: 120, // Rango del aura
+      auraBuff: 0.2, // 20% de mejora para torres cercanas
+      element: "normal",
+      rarity: "legendaria"
     }
   };
   
@@ -212,14 +488,88 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   };
   
+  // Setup Tech Tree
+  function setupTechTree() {
+    // Update tech points display
+    document.getElementById('techPoints').textContent = `${gameState.techPoints} 🔮`;
+    
+    // Setup tech upgrade buttons
+    document.getElementById('upgradeDamage').addEventListener('click', () => upgradeTech('damage'));
+    document.getElementById('upgradeRange').addEventListener('click', () => upgradeTech('range'));
+    document.getElementById('upgradeSpeed').addEventListener('click', () => upgradeTech('speed'));
+    
+    // Update tech level displays
+    updateTechLevels();
+  }
+  
+  // Update Tech Levels Display
+  function updateTechLevels() {
+    const maxLevel = 5;
+    
+    // Update damage level
+    let damageLevel = '';
+    for (let i = 0; i < maxLevel; i++) {
+      damageLevel += i < gameState.techTree.damage ? '◉' : '○';
+    }
+    document.getElementById('techDamage').textContent = damageLevel;
+    
+    // Update range level
+    let rangeLevel = '';
+    for (let i = 0; i < maxLevel; i++) {
+      rangeLevel += i < gameState.techTree.range ? '◉' : '○';
+    }
+    document.getElementById('techRange').textContent = rangeLevel;
+    
+    // Update speed level
+    let speedLevel = '';
+    for (let i = 0; i < maxLevel; i++) {
+      speedLevel += i < gameState.techTree.speed ? '◉' : '○';
+    }
+    document.getElementById('techSpeed').textContent = speedLevel;
+    
+    // Update button states
+    document.getElementById('upgradeDamage').disabled = gameState.techPoints < 1 || gameState.techTree.damage >= maxLevel;
+    document.getElementById('upgradeRange').disabled = gameState.techPoints < 1 || gameState.techTree.range >= maxLevel;
+    document.getElementById('upgradeSpeed').disabled = gameState.techPoints < 1 || gameState.techTree.speed >= maxLevel;
+  }
+  
+  // Upgrade Tech
+  function upgradeTech(techType) {
+    if (gameState.techPoints < 1) return;
+    
+    // Check max level
+    if (gameState.techTree[techType] >= 5) return;
+    
+    // Spend tech point
+    gameState.techPoints--;
+    
+    // Upgrade tech
+    gameState.techTree[techType]++;
+    
+    // Update displays
+    document.getElementById('techPoints').textContent = `${gameState.techPoints} 🔮`;
+    updateTechLevels();
+    
+    // Log upgrade
+    const techNames = {
+      damage: "Daño",
+      range: "Alcance",
+      speed: "Velocidad"
+    };
+    logMessage(`¡Tecnología ${techNames[techType]} mejorada al nivel ${gameState.techTree[techType]}!`);
+  }
+  
   // Initialize Game
   function initGame() {
-    generatePath();
+    generateRandomPath();
     updateResourceDisplay();
     updateHealthDisplay();
     
-    // Setup drag and drop for towers
-    setupTowerDragDrop();
+    // Filtrar torres disponibles según las desbloqueadas
+    filterAvailableTowers();
+    
+    // Ya no necesitamos drag and drop desde el sidebar
+    // setupTowerDragDrop();
     
     // Setup tower selection panel
     setupTowerSelectionPanel();
@@ -227,8 +577,19 @@ document.addEventListener('DOMContentLoaded', function() {
     // Setup tower context menu
     setupTowerContextMenu();
     
+    // Setup tech tree
+    setupTechTree();
+    
     // Hide wave timer initially
-    document.getElementById('waveTimer').style.display = 'none';
+    const waveTimer = document.getElementById('waveTimer');
+    if (waveTimer) waveTimer.style.display = 'none';
+    
+    // Initialize weather system
+    initWeatherSystem();
+    
+    // Update mobile speed display
+    const mobileSpeedValue = document.getElementById('mobileSpeedValue');
+    if (mobileSpeedValue) mobileSpeedValue.textContent = gameState.gameSpeed;
     
     // Event listeners
     startGameBtn.addEventListener('click', startGame);
@@ -237,6 +598,18 @@ document.addEventListener('DOMContentLoaded', function() {
     sellTowerBtn.addEventListener('click', sellSelectedTower);
     upgradeTowerBtn.addEventListener('click', upgradeSelectedTower);
     document.getElementById('deselectTowerBtn').addEventListener('click', deselectTower);
+    document.getElementById('mobileStartWaveBtn').addEventListener('click', startWave);
+    const newMapBtn = document.getElementById('newMapBtn');
+    const mobileNewMapBtn = document.getElementById('mobileNewMapBtn');
+    if (newMapBtn) newMapBtn.addEventListener('click', generateNewMap);
+    if (mobileNewMapBtn) mobileNewMapBtn.addEventListener('click', generateNewMap);
+    
+    // Toolbar buttons
+    const toolbarSellBtn = document.getElementById('toolbarSellBtn');
+    const toolbarUpgradeBtn = document.getElementById('toolbarUpgradeBtn');
+    if (toolbarSellBtn) toolbarSellBtn.addEventListener('click', sellSelectedTower);
+    if (toolbarUpgradeBtn) toolbarUpgradeBtn.addEventListener('click', upgradeSelectedTower);
+    
     canvas.addEventListener('click', handleCanvasClick);
     
     // Mouse move for range preview
@@ -255,7 +628,7 @@ document.addEventListener('DOMContentLoaded', function() {
           // Cancel tower placement
           gameState.selectedTowerType = null;
           gameState.showRangePreview = false;
-          document.querySelectorAll('.tower-select-btn').forEach(b => b.classList.remove('selected'));
+          document.querySelectorAll('.toolbar-btn').forEach(b => b.classList.remove('selected'));
         } else if (gameState.selectedTower) {
           // Deselect tower
           deselectTower();
@@ -264,16 +637,36 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
+  // Filtrar torres disponibles según las desbloqueadas
+  function filterAvailableTowers() {
+    // Filtrar torres en la barra de herramientas
+    document.querySelectorAll('.toolbar-btn').forEach(element => {
+      if (element.id === 'cancelTowerSelection') return; // No ocultar el botón de cancelar
+      
+      const towerType = element.dataset.type;
+      if (!gameState.unlockedTowers.includes(towerType)) {
+        element.style.display = 'none';
+        element.classList.add('locked');
+      } else {
+        element.style.display = 'flex';
+        element.classList.remove('locked');
+      }
+    });
+    
+    // Mostrar mensaje de torres disponibles
+    console.log("Torres disponibles:", gameState.unlockedTowers);
+  }
+  
   // Setup tower selection panel
   function setupTowerSelectionPanel() {
-    const towerSelectBtns = document.querySelectorAll('.tower-select-btn');
+    const toolbarBtns = document.querySelectorAll('.toolbar-btn');
     const cancelBtn = document.getElementById('cancelTowerSelection');
     
-    towerSelectBtns.forEach(btn => {
+    toolbarBtns.forEach(btn => {
       if (btn.id !== 'cancelTowerSelection') {
         btn.addEventListener('click', function() {
           // Deselect all buttons
-          towerSelectBtns.forEach(b => b.classList.remove('selected'));
+          toolbarBtns.forEach(b => b.classList.remove('selected'));
           
           // Select this button
           this.classList.add('selected');
@@ -289,17 +682,19 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Setup cancel button
-    cancelBtn.addEventListener('click', function() {
-      // Deselect all buttons
-      towerSelectBtns.forEach(b => b.classList.remove('selected'));
-      
-      // Clear tower selection
-      gameState.selectedTowerType = null;
-      gameState.showRangePreview = false;
-      
-      // Also deselect any selected tower
-      deselectTower();
-    });
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', function() {
+        // Deselect all buttons
+        toolbarBtns.forEach(b => b.classList.remove('selected'));
+        
+        // Clear tower selection
+        gameState.selectedTowerType = null;
+        gameState.showRangePreview = false;
+        
+        // Also deselect any selected tower
+        deselectTower();
+      });
+    }
   }
   
   // Setup tower context menu
@@ -403,6 +798,12 @@ document.addEventListener('DOMContentLoaded', function() {
   function placeTower(type, x, y) {
     // Check if tower type exists
     if (!towerTypes[type]) return;
+    
+    // Check if tower is unlocked
+    if (!gameState.unlockedTowers.includes(type)) {
+      logMessage(`La torre ${towerTypes[type].name} no está desbloqueada todavía`);
+      return;
+    }
     
     // Check if player has enough resources
     if (gameState.resources < towerTypes[type].cost) {
@@ -687,30 +1088,83 @@ document.addEventListener('DOMContentLoaded', function() {
   function updateTowerInfoPanel(tower) {
     const towerInfo = document.getElementById('towerInfo');
     const upgradePanel = document.getElementById('upgradePanel');
+    const toolbarTowerInfo = document.getElementById('toolbarTowerInfo');
     const type = towerTypes[tower.type];
     
-    towerInfo.innerHTML = `
-      <h3>${type.name} (Nivel ${tower.level})</h3>
-      <div>Daño: ${tower.damage.toFixed(1)}</div>
-      <div>Alcance: ${tower.range}</div>
-      <div>Velocidad: ${tower.fireRate.toFixed(2)} disparos/s</div>
-    `;
+    // Update sidebar panel
+    if (towerInfo && upgradePanel) {
+      towerInfo.innerHTML = `
+        <div style="background: rgba(0,0,0,0.1); padding: 10px; border-radius: 5px; margin-bottom: 10px;">
+          <h3 style="margin: 0 0 8px 0; color: var(--text-title);">${type.name} (Nivel ${tower.level})</h3>
+          <div style="margin: 3px 0;">💥 Daño: ${tower.damage.toFixed(1)}</div>
+          <div style="margin: 3px 0;">🎯 Alcance: ${tower.range}</div>
+          <div style="margin: 3px 0;">⚡ Velocidad: ${tower.fireRate.toFixed(2)} disparos/s</div>
+          <div style="margin: 3px 0;">🏷️ Elemento: ${type.element}</div>
+        </div>
+      `;
+      
+      const upgradeCost = Math.floor(type.upgradeCost * Math.pow(tower.level, 1.5));
+      upgradePanel.innerHTML = `
+        <div style="background: rgba(163,198,68,0.1); padding: 10px; border-radius: 5px;">
+          <h4 style="margin: 0 0 8px 0; color: var(--text-title);">Mejora a Nivel ${tower.level + 1}</h4>
+          <div style="margin: 3px 0;">💰 Coste: ${upgradeCost} 🍃</div>
+          <div style="margin: 3px 0;">📈 Daño: +${(tower.damage * (type.upgradeMultiplier - 1)).toFixed(1)}</div>
+          <div style="margin: 3px 0;">📏 Alcance: +${Math.floor(tower.range * 0.1)}</div>
+        </div>
+      `;
+    }
     
-    const upgradeCost = Math.floor(type.upgradeCost * Math.pow(tower.level, 1.5));
-    upgradePanel.innerHTML = `
-      <h3>Mejora a Nivel ${tower.level + 1}</h3>
-      <div>Coste: ${upgradeCost} 🍃</div>
-      <div>Daño: +${(tower.damage * (type.upgradeMultiplier - 1)).toFixed(1)}</div>
-      <div>Alcance: +${Math.floor(tower.range * 0.1)}</div>
-    `;
+    // Update toolbar info
+    if (toolbarTowerInfo) {
+      const upgradeCost = Math.floor(type.upgradeCost * Math.pow(tower.level, 1.5));
+      const sellValue = Math.floor(getTowerTotalCost(tower) * 0.7);
+      
+      // Current tower info
+      const currentInfo = document.getElementById('currentTowerInfo');
+      if (currentInfo) {
+        currentInfo.innerHTML = `
+          <div><strong>${type.name}</strong> Nv.${tower.level}</div>
+          <div>💥${tower.damage.toFixed(1)} 🎯${tower.range} ⚡${tower.fireRate.toFixed(1)}/s</div>
+        `;
+      }
+      
+      // Upgrade info
+      const upgradeInfo = document.getElementById('upgradeTowerInfo');
+      if (upgradeInfo) {
+        const newDamage = tower.damage * type.upgradeMultiplier;
+        const newRange = tower.range + Math.floor(tower.range * 0.1);
+        upgradeInfo.innerHTML = `
+          <div><strong>${type.name}</strong> Nv.${tower.level + 1}</div>
+          <div>💥${newDamage.toFixed(1)} 🎯${newRange} ⚡${tower.fireRate.toFixed(1)}/s</div>
+          <div style="color: #a3c644;">💰 ${upgradeCost} 🍃</div>
+        `;
+      }
+      
+      const sellBtn = document.getElementById('toolbarSellBtn');
+      const upgradeBtn = document.getElementById('toolbarUpgradeBtn');
+      
+      if (sellBtn) {
+        sellBtn.textContent = `Vender (+${sellValue})`;
+        sellBtn.disabled = false;
+      }
+      
+      if (upgradeBtn) {
+        upgradeBtn.textContent = `Mejorar`;
+        upgradeBtn.disabled = gameState.resources < upgradeCost;
+      }
+    }
     
-    // Update upgrade button text
-    upgradeTowerBtn.textContent = `Mejorar (${upgradeCost} 🍃)`;
-    upgradeTowerBtn.disabled = gameState.resources < upgradeCost;
+    // Update sidebar buttons
+    if (upgradeTowerBtn) {
+      const upgradeCost = Math.floor(type.upgradeCost * Math.pow(tower.level, 1.5));
+      upgradeTowerBtn.textContent = `Mejorar (${upgradeCost} 🍃)`;
+      upgradeTowerBtn.disabled = gameState.resources < upgradeCost;
+    }
     
-    // Update sell button text
-    const sellValue = Math.floor(getTowerTotalCost(tower) * 0.7);
-    sellTowerBtn.textContent = `Vender (+${sellValue} 🍃)`;
+    if (sellTowerBtn) {
+      const sellValue = Math.floor(getTowerTotalCost(tower) * 0.7);
+      sellTowerBtn.textContent = `Vender (+${sellValue} 🍃)`;
+    }
   }
   
   // Get total cost of tower including upgrades
@@ -784,12 +1238,23 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Start the game
   function startGame() {
-    gameState.isPlaying = true;
-    gameOverlay.style.display = 'none';
-    logMessage("¡Juego iniciado! Coloca torres y prepárate para la primera oleada.");
-    
-    // Start game loop
-    requestAnimationFrame(gameLoop);
+    console.log('Iniciando juego...');
+    try {
+      gameState.isPlaying = true;
+      gameOverlay.style.display = 'none';
+      logMessage("¡Juego iniciado! Coloca torres rápido, la oleada comenzará en 3 segundos.");
+      
+      // Update speed button text to match default speed
+      speedBtn.textContent = `Velocidad: x${gameState.gameSpeed}`;
+      
+      // Start game loop
+      gameState.lastFrameTime = performance.now();
+      requestAnimationFrame(gameLoop);
+      console.log('Juego iniciado correctamente');
+    } catch (error) {
+      console.error('Error al iniciar el juego:', error);
+      alert('Error al iniciar el juego: ' + error.message);
+    }
   }
   
   // Start a wave of enemies
@@ -816,59 +1281,163 @@ document.addEventListener('DOMContentLoaded', function() {
     const currentIndex = speeds.indexOf(gameState.gameSpeed);
     gameState.gameSpeed = speeds[(currentIndex + 1) % speeds.length];
     
+    // Update speed displays
     speedBtn.textContent = `Velocidad: x${gameState.gameSpeed}`;
+    const mobileSpeedValue = document.getElementById('mobileSpeedValue');
+    if (mobileSpeedValue) mobileSpeedValue.textContent = gameState.gameSpeed;
   }
   
   // Spawn enemy
   function spawnEnemy() {
     let enemyType;
+    let healthMultiplier = 1 + (gameState.wave - 1) * 0.2;
     
-    // Determine enemy type based on wave and randomness
+    // Check for special events
+    if (gameState.specialEvents.bossRaid) {
+      enemyType = 'boss';
+      healthMultiplier *= 1.4; // 40% stronger boss
+      gameState.specialEvents.bossRaid = false; // Reset flag
+      const enemy = createEnemy(enemyType, healthMultiplier);
+      gameState.enemies.push(enemy);
+      gameState.enemiesSpawned++;
+      return enemy;
+    }
+    
+    // Check for special wave types
+    if (gameState.specialEvents.nextWaveType) {
+      switch(gameState.specialEvents.nextWaveType) {
+        case 'fast':
+          enemyType = Math.random() < 0.7 ? 'wasp' : 'fast';
+          break;
+        case 'swarm':
+          enemyType = 'scout';
+          healthMultiplier *= 0.7; // Weaker enemies
+          break;
+        case 'mixed':
+          // Random mix of all enemy types
+          const types = ['basic', 'fast', 'scout', 'soldier', 'wasp', 'beetle'];
+          enemyType = types[Math.floor(Math.random() * types.length)];
+          break;
+        default:
+          // Use normal enemy selection
+          enemyType = selectNormalEnemy();
+      }
+      
+      // Only clear after all enemies are spawned
+      if (gameState.enemiesSpawned >= gameState.enemiesPerWave * gameState.wave - 1) {
+        gameState.specialEvents.nextWaveType = null;
+      }
+    } else {
+      // Normal enemy selection
+      enemyType = selectNormalEnemy();
+    }
+    
+    const enemy = createEnemy(enemyType, healthMultiplier);
+    gameState.enemies.push(enemy);
+    gameState.enemiesSpawned++;
+    return enemy;
+  }
+  
+  // Select normal enemy based on wave and randomness
+  function selectNormalEnemy() {
     const rand = Math.random();
     
     if (gameState.wave >= 9 && rand < 0.2) {
-      enemyType = 'boss';
+      return 'boss';
     } else if (gameState.wave >= 8 && rand < 0.3) {
-      enemyType = 'beetle';
+      return 'beetle';
     } else if (gameState.wave >= 6 && rand < 0.3) {
-      enemyType = 'wasp';
+      return 'wasp';
     } else if (gameState.wave >= 5 && rand < 0.4) {
-      enemyType = 'soldier';
+      return 'soldier';
     } else if (gameState.wave >= 3 && rand < 0.4) {
-      enemyType = 'scout';
+      return 'scout';
     } else if (gameState.wave >= 2 && rand < 0.5) {
-      enemyType = 'fast';
+      return 'fast';
     } else {
-      enemyType = 'basic';
+      return 'basic';
     }
-    
-    // Scale enemy health based on wave
-    const healthMultiplier = 1 + (gameState.wave - 1) * 0.2;
-    
-    const enemy = {
-      type: enemyType,
-      x: map.path[0].x,
-      y: map.path[0].y,
-      health: enemyTypes[enemyType].health * healthMultiplier,
-      maxHealth: enemyTypes[enemyType].health * healthMultiplier,
-      speed: enemyTypes[enemyType].speed,
-      reward: enemyTypes[enemyType].reward,
-      damage: enemyTypes[enemyType].damage,
-      color: enemyTypes[enemyType].color,
-      size: enemyTypes[enemyType].size,
-      pathIndex: 0,
-      progress: 0,
-      direction: 0 // Will be updated based on movement
-    };
-    
-    gameState.enemies.push(enemy);
-    gameState.enemiesSpawned++;
+  }
+  
+  // Create enemy with given type and health multiplier
+  function createEnemy(enemyType, healthMultiplier) {
+    try {
+      if (!enemyTypes[enemyType]) {
+        console.error('Tipo de enemigo no válido:', enemyType);
+        enemyType = 'basic'; // Usar tipo básico como fallback
+      }
+      
+      const enemy = {
+        type: enemyType,
+        x: map.path[0].x,
+        y: map.path[0].y,
+        health: enemyTypes[enemyType].health * healthMultiplier,
+        maxHealth: enemyTypes[enemyType].health * healthMultiplier,
+        speed: enemyTypes[enemyType].speed,
+        reward: enemyTypes[enemyType].reward,
+        damage: enemyTypes[enemyType].damage,
+        color: enemyTypes[enemyType].color,
+        size: enemyTypes[enemyType].size,
+        pathIndex: 0,
+        progress: 0,
+        direction: 0, // Will be updated based on movement
+        effects: [] // Para efectos como veneno, quemadura, congelación, etc.
+      };
+      
+      // Apply weather effects to enemy
+      try {
+        const weatherEffects = applyWeatherEffectsToEnemy(enemy);
+        if (weatherEffects && weatherEffects.speed !== undefined) {
+          enemy.speed = weatherEffects.speed;
+        }
+      } catch (weatherError) {
+        console.error('Error al aplicar efectos del clima:', weatherError);
+      }
+      
+      return enemy;
+    } catch (error) {
+      console.error('Error al crear enemigo:', error);
+      // Crear un enemigo básico como fallback
+      return {
+        type: 'basic',
+        x: map.path[0].x,
+        y: map.path[0].y,
+        health: 50,
+        maxHealth: 50,
+        speed: 1,
+        reward: 5,
+        damage: 5,
+        color: '#e74c3c',
+        size: 15,
+        pathIndex: 0,
+        progress: 0,
+        direction: 0,
+        effects: []
+      };
+    }
   }
   
   // Move enemies along the path
   function moveEnemies(deltaTime) {
     for (let i = gameState.enemies.length - 1; i >= 0; i--) {
       const enemy = gameState.enemies[i];
+      
+      // Update enemy effects (poison, burn, freeze, etc.)
+      updateEnemyEffects(enemy, deltaTime);
+      
+      // Check if enemy died from effects
+      if (enemy.health <= 0) {
+        // Enemy defeated by effects
+        gameState.enemies.splice(i, 1);
+        
+        // Add resources and score
+        gameState.resources += enemy.reward;
+        gameState.score += enemy.reward;
+        
+        updateResourceDisplay();
+        logMessage(`${enemyTypes[enemy.type].name} derrotado por efectos (+${enemy.reward} hojas)`);
+        continue;
+      }
       
       // Calculate movement
       const currentPoint = map.path[enemy.pathIndex];
@@ -987,11 +1556,18 @@ document.addEventListener('DOMContentLoaded', function() {
   function fireTower(tower) {
     if (!tower.target) return;
     
+    // Apply weather and tech effects to tower
+    const towerEffects = applyWeatherEffects(tower);
+    const damage = towerEffects.damage;
+    
+    // Check for special tower abilities
+    const towerType = towerTypes[tower.type];
+    
     if (tower.areaEffect) {
       // Area effect tower (bomber)
-      damageEnemiesInArea(tower.target.x, tower.target.y, tower.areaRadius, tower.damage);
+      damageEnemiesInArea(tower.target.x, tower.target.y, tower.areaRadius, damage);
     } else {
-      // Create projectile
+      // Create projectile with special effects
       const projectile = {
         x: tower.x,
         y: tower.y,
@@ -999,12 +1575,73 @@ document.addEventListener('DOMContentLoaded', function() {
         targetY: tower.target.y,
         target: tower.target,
         speed: tower.projectileSpeed * gameState.gameSpeed,
-        damage: tower.damage,
+        damage: damage,
         color: tower.color,
-        size: 5
+        size: 5,
+        towerType: tower.type,
+        // Special effects
+        poisonEffect: towerType.poisonEffect || false,
+        poisonDamage: towerType.poisonDamage || 0,
+        poisonDuration: towerType.poisonDuration || 0,
+        burnEffect: towerType.burnEffect || false,
+        burnDamage: towerType.burnDamage || 0,
+        burnDuration: towerType.burnDuration || 0,
+        freezeEffect: towerType.freezeEffect || false,
+        slowFactor: towerType.slowFactor || 0,
+        freezeDuration: towerType.freezeDuration || 0,
+        devourChance: towerType.devourChance || 0
       };
       
+      // Queen tower special ability: chance to spawn a basic tower
+      if (tower.type === 'queen' && Math.random() < towerType.spawnRate) {
+        spawnBasicTowerNear(tower);
+      }
+      
       gameState.projectiles.push(projectile);
+    }
+  }
+  
+  // Spawn a basic tower near the queen
+  function spawnBasicTowerNear(queenTower) {
+    // Try to find a valid position near the queen
+    const radius = 80; // Search radius
+    const attempts = 10; // Max attempts
+    
+    for (let i = 0; i < attempts; i++) {
+      // Random angle
+      const angle = Math.random() * Math.PI * 2;
+      const distance = 40 + Math.random() * (radius - 40);
+      
+      // Calculate position
+      const x = queenTower.x + Math.cos(angle) * distance;
+      const y = queenTower.y + Math.sin(angle) * distance;
+      
+      // Check if position is valid
+      if (x >= 0 && x <= map.width && y >= 0 && y <= map.height && 
+          !isOnPath(x, y) && !isTowerAt(x, y)) {
+        
+        // Create a basic tower for free
+        const tower = {
+          type: 'basic',
+          x: x,
+          y: y,
+          damage: towerTypes.basic.damage * 0.7, // 70% damage of normal basic tower
+          range: towerTypes.basic.range * 0.8, // 80% range
+          fireRate: towerTypes.basic.fireRate,
+          projectileSpeed: towerTypes.basic.projectileSpeed,
+          color: towerTypes.basic.color,
+          lastFired: 0,
+          level: 1,
+          target: null,
+          direction: 0
+        };
+        
+        // Add tower to game state
+        gameState.towers.push(tower);
+        
+        logMessage(`¡La Reina ha generado una Hormiga Soldado!`);
+        return;
+      }
     }
   }
   
@@ -1038,7 +1675,8 @@ document.addEventListener('DOMContentLoaded', function() {
       if (distance < 5 || !isEnemyAlive(projectile.target)) {
         // Projectile hit target or target is gone
         if (isEnemyAlive(projectile.target)) {
-          damageEnemy(projectile.target, projectile.damage);
+          // Pass the projectile to apply special effects
+          damageEnemy(projectile.target, projectile.damage, projectile);
         }
         
         gameState.projectiles.splice(i, 1);
@@ -1053,8 +1691,51 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   // Apply damage to enemy
-  function damageEnemy(enemy, damage) {
+  function damageEnemy(enemy, damage, projectile = null) {
+    // Apply damage
     enemy.health -= damage;
+    
+    // Apply special effects if projectile is provided
+    if (projectile) {
+      // Poison effect
+      if (projectile.poisonEffect && !enemy.effects.some(e => e.type === 'poison')) {
+        enemy.effects.push({
+          type: 'poison',
+          damage: projectile.poisonDamage,
+          duration: projectile.poisonDuration,
+          timer: projectile.poisonDuration
+        });
+      }
+      
+      // Burn effect
+      if (projectile.burnEffect && !enemy.effects.some(e => e.type === 'burn')) {
+        enemy.effects.push({
+          type: 'burn',
+          damage: projectile.burnDamage,
+          duration: projectile.burnDuration,
+          timer: projectile.burnDuration
+        });
+      }
+      
+      // Freeze effect
+      if (projectile.freezeEffect && !enemy.effects.some(e => e.type === 'freeze')) {
+        const originalSpeed = enemy.speed;
+        enemy.effects.push({
+          type: 'freeze',
+          slowFactor: projectile.slowFactor,
+          duration: projectile.freezeDuration,
+          timer: projectile.freezeDuration,
+          originalSpeed: originalSpeed
+        });
+        enemy.speed *= (1 - projectile.slowFactor);
+      }
+      
+      // Devour chance (instant kill)
+      if (projectile.devourChance && Math.random() < projectile.devourChance) {
+        enemy.health = 0;
+        logMessage(`¡Una Hormiga Carnívora ha devorado a un ${enemyTypes[enemy.type].name}!`);
+      }
+    }
     
     if (enemy.health <= 0) {
       // Enemy defeated
@@ -1066,10 +1747,157 @@ document.addEventListener('DOMContentLoaded', function() {
         gameState.resources += enemy.reward;
         gameState.score += enemy.reward;
         
+        // Update player performance
+        gameState.playerPerformance.totalKills++;
+        if (enemy.type === 'boss') {
+          gameState.playerPerformance.bossesDefeated++;
+        }
+        
         updateResourceDisplay();
         logMessage(`${enemyTypes[enemy.type].name} derrotado (+${enemy.reward} hojas)`);
       }
     }
+  }
+  
+  // Update enemy effects
+  function updateEnemyEffects(enemy, deltaTime) {
+    if (!enemy.effects || enemy.effects.length === 0) return;
+    
+    for (let i = enemy.effects.length - 1; i >= 0; i--) {
+      const effect = enemy.effects[i];
+      effect.timer -= deltaTime;
+      
+      // Apply effect damage
+      if (effect.type === 'poison' || effect.type === 'burn') {
+        const effectDamage = effect.damage * deltaTime;
+        enemy.health -= effectDamage;
+      }
+      
+      // Remove expired effects
+      if (effect.timer <= 0) {
+        // Restore original speed for freeze effect
+        if (effect.type === 'freeze') {
+          enemy.speed = effect.originalSpeed;
+        }
+        enemy.effects.splice(i, 1);
+      }
+    }
+  }
+  
+  // Check for Special Events
+  function checkForSpecialEvents() {
+    // Check player performance
+    const performance = gameState.playerPerformance;
+    const currentWave = gameState.wave;
+    
+    // Only trigger events if we're at least at wave 3
+    if (currentWave < 3) return;
+    
+    // Only check for events every 2-3 waves
+    if (currentWave - gameState.specialEvents.lastEventWave < 2) return;
+    
+    // Calculate player skill level (0-100)
+    const skillLevel = calculatePlayerSkill();
+    
+    // High skill players get challenging events
+    if (skillLevel > 75 && Math.random() < 0.25) {
+      // 25% chance for boss raid for skilled players
+      scheduleBossRaid();
+      gameState.specialEvents.lastEventWave = currentWave;
+      return;
+    }
+    
+    // Medium skill players get random events
+    if (skillLevel > 40 && Math.random() < 0.15) {
+      // 15% chance for special wave
+      scheduleSpecialWave();
+      gameState.specialEvents.lastEventWave = currentWave;
+      return;
+    }
+    
+    // Low skill players get helpful events
+    if (skillLevel < 30 && Math.random() < 0.3) {
+      // 30% chance for resource bonus
+      giveResourceBonus();
+      gameState.specialEvents.lastEventWave = currentWave;
+      return;
+    }
+  }
+  
+  // Calculate Player Skill Level
+  function calculatePlayerSkill() {
+    const p = gameState.playerPerformance;
+    const healthPercent = gameState.health / gameState.maxHealth * 100;
+    
+    // Factors to consider:
+    // 1. Flawless waves ratio
+    // 2. Current health
+    // 3. Tower efficiency (score per tower)
+    // 4. Resource management (unused resources)
+    
+    const flawlessRatio = p.totalWaves > 0 ? (p.flawlessWaves / p.totalWaves) * 100 : 0;
+    const towerEfficiency = gameState.towers.length > 0 ? gameState.score / gameState.towers.length : 0;
+    const normalizedEfficiency = Math.min(towerEfficiency / 10, 100); // Cap at 100
+    
+    // Calculate skill score (0-100)
+    const skillScore = (
+      flawlessRatio * 0.4 +
+      healthPercent * 0.3 +
+      normalizedEfficiency * 0.3
+    );
+    
+    return Math.min(Math.max(skillScore, 0), 100); // Ensure between 0-100
+  }
+  
+  // Schedule Boss Raid
+  function scheduleBossRaid() {
+    gameState.specialEvents.bossRaid = true;
+    
+    // Create a stronger boss
+    const bossMultiplier = 1.4; // 40% stronger
+    
+    logMessage(`¡ALERTA! Los exploradores informan de un Ciempiés Gigante acercándose. ¡Prepárate para un desafío!`);
+    
+    // Next wave will be a boss raid
+    gameState.waveTimer = 10; // Give player 10 seconds to prepare
+    document.getElementById('waveTimerValue').textContent = gameState.waveTimer;
+    document.getElementById('waveTimer').style.display = 'block';
+  }
+  
+  // Schedule Special Wave
+  function scheduleSpecialWave() {
+    // Choose a special wave type
+    const waveTypes = ['fast', 'swarm', 'mixed'];
+    const waveType = waveTypes[Math.floor(Math.random() * waveTypes.length)];
+    
+    switch(waveType) {
+      case 'fast':
+        logMessage(`¡ALERTA! Un grupo de avispas se acerca a gran velocidad. ¡Prepara tus defensas!`);
+        break;
+      case 'swarm':
+        logMessage(`¡ALERTA! Una gran cantidad de hormigas exploradoras se aproxima. ¡Son muchas pero débiles!`);
+        break;
+      case 'mixed':
+        logMessage(`¡ALERTA! Un grupo variado de enemigos se acerca. ¡Prepárate para todo tipo de amenazas!`);
+        break;
+    }
+    
+    // Store wave type for next wave
+    gameState.specialEvents.nextWaveType = waveType;
+    
+    // Give player time to prepare
+    gameState.waveTimer = 8; // 8 seconds
+    document.getElementById('waveTimerValue').textContent = gameState.waveTimer;
+    document.getElementById('waveTimer').style.display = 'block';
+  }
+  
+  // Give Resource Bonus
+  function giveResourceBonus() {
+    const bonus = 20 + gameState.wave * 5;
+    gameState.resources += bonus;
+    updateResourceDisplay();
+    
+    logMessage(`¡Tus recolectoras han encontrado un tesoro! +${bonus} hojas`);
   }
   
   // Check if wave is complete
@@ -1093,6 +1921,23 @@ document.addEventListener('DOMContentLoaded', function() {
       const bonus = 10 + (gameState.wave - 1) * 5;
       gameState.resources += bonus;
       gameState.score += bonus * 2;
+      
+      // Award tech point every 2 waves
+      if (gameState.wave % 2 === 0) {
+        gameState.techPoints++;
+        logMessage(`¡Has ganado un punto de tecnología! (×${gameState.techPoints} 🔮)`);
+        updateTechLevels();
+      }
+      
+      // Update player performance
+      gameState.playerPerformance.totalWaves++;
+      if (gameState.health === gameState.maxHealth) {
+        gameState.playerPerformance.flawlessWaves++;
+      }
+      
+      // Check for special events
+      checkForSpecialEvents();
+      
       updateResourceDisplay();
       
       logMessage(`¡Oleada completada! Bonus: +${bonus} hojas`);
@@ -1102,7 +1947,7 @@ document.addEventListener('DOMContentLoaded', function() {
         gameOver(true);
       } else {
         // Reset wave timer for next wave
-        gameState.waveTimer = 30;
+        gameState.waveTimer = 3; // 3 segundos por defecto
         document.getElementById('waveTimerValue').textContent = gameState.waveTimer;
         document.getElementById('waveTimer').style.display = 'block';
       }
@@ -1141,6 +1986,10 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelector('#score .resource-value').textContent = gameState.score;
     document.querySelector('#wave .resource-value').textContent = `${gameState.wave}/${gameState.maxWaves}`;
     
+    // Update map resources indicator
+    const mapLeaves = document.getElementById('mapLeaves');
+    if (mapLeaves) mapLeaves.textContent = gameState.resources;
+    
     // Update mobile panel
     document.getElementById('mobileLeaves').textContent = gameState.resources;
     document.getElementById('mobileWave').textContent = `${gameState.wave}/${gameState.maxWaves}`;
@@ -1159,6 +2008,10 @@ document.addEventListener('DOMContentLoaded', function() {
       healthBarFill.style.backgroundColor = 'var(--health-bar)';
     }
     
+    // Update map health indicator
+    const mapHealth = document.getElementById('mapHealth');
+    if (mapHealth) mapHealth.textContent = gameState.health;
+    
     // Update mobile panel
     document.getElementById('mobileHealth').textContent = gameState.health;
   }
@@ -1172,6 +2025,134 @@ document.addEventListener('DOMContentLoaded', function() {
     // Limit log entries
     while (battleLog.children.length > 20) {
       battleLog.removeChild(battleLog.lastChild);
+    }
+  }
+  
+  // Initialize Weather System
+  function initWeatherSystem() {
+    // Set random initial weather
+    const weatherKeys = Object.keys(weatherTypes);
+    const randomWeather = weatherKeys[Math.floor(Math.random() * weatherKeys.length)];
+    gameState.currentWeather = randomWeather;
+    gameState.weatherTimer = weatherTypes[randomWeather].duration;
+    gameState.weatherDuration = weatherTypes[randomWeather].duration;
+    
+    // Update weather display
+    updateWeatherDisplay();
+  }
+  
+  // Update Weather Display
+  function updateWeatherDisplay() {
+    const weather = weatherTypes[gameState.currentWeather];
+    const weatherIcon = document.getElementById('weatherIcon');
+    const weatherName = document.getElementById('weatherName');
+    
+    if (!weatherIcon || !weatherName) return;
+    
+    // Set weather icon based on type
+    switch(gameState.currentWeather) {
+      case "sunny": weatherIcon.textContent = "☀️"; break;
+      case "rainy": weatherIcon.textContent = "🌧️"; break;
+      case "cold": weatherIcon.textContent = "❄️"; break;
+      case "foggy": weatherIcon.textContent = "🌫️"; break;
+      default: weatherIcon.textContent = "🌤️";
+    }
+    
+    // Update name
+    weatherName.textContent = weather.name;
+    weatherName.style.color = weather.color;
+  }
+  
+  // Change Weather
+  function changeWeather() {
+    // Get all weather types except current
+    const weatherKeys = Object.keys(weatherTypes).filter(key => key !== gameState.currentWeather);
+    
+    // Select random weather
+    const newWeather = weatherKeys[Math.floor(Math.random() * weatherKeys.length)];
+    gameState.currentWeather = newWeather;
+    gameState.weatherTimer = weatherTypes[newWeather].duration;
+    gameState.weatherDuration = weatherTypes[newWeather].duration;
+    
+    // Update display
+    updateWeatherDisplay();
+    
+    // Log weather change
+    logMessage(`¡El clima ha cambiado a ${weatherTypes[newWeather].name}! ${weatherTypes[newWeather].description}`);
+  }
+  
+  // Apply Weather Effects
+  function applyWeatherEffects(tower) {
+    const weather = weatherTypes[gameState.currentWeather];
+    const effects = weather.effects;
+    let damageMultiplier = 1;
+    let rangeMultiplier = 1;
+    let fireRateMultiplier = 1;
+    
+    // Apply global effects if any
+    if (effects.towerBuffs && effects.towerBuffs.global) {
+      if (effects.towerBuffs.global.damage) damageMultiplier += effects.towerBuffs.global.damage;
+      if (effects.towerBuffs.global.range) rangeMultiplier += effects.towerBuffs.global.range;
+      if (effects.towerBuffs.global.fireRate) fireRateMultiplier += effects.towerBuffs.global.fireRate;
+    }
+    
+    if (effects.towerDebuffs && effects.towerDebuffs.global) {
+      if (effects.towerDebuffs.global.damage) damageMultiplier += effects.towerDebuffs.global.damage;
+      if (effects.towerDebuffs.global.range) rangeMultiplier += effects.towerDebuffs.global.range;
+      if (effects.towerDebuffs.global.fireRate) fireRateMultiplier += effects.towerDebuffs.global.fireRate;
+    }
+    
+    // Apply element-specific effects
+    const element = towerTypes[tower.type].element;
+    if (effects.towerBuffs && effects.towerBuffs[element]) {
+      damageMultiplier += effects.towerBuffs[element];
+    }
+    
+    if (effects.towerDebuffs && effects.towerDebuffs[element]) {
+      damageMultiplier += effects.towerDebuffs[element];
+    }
+    
+    // Apply tech tree bonuses
+    damageMultiplier += gameState.techTree.damage * 0.1; // +10% per level
+    rangeMultiplier += gameState.techTree.range * 0.1;   // +10% per level
+    fireRateMultiplier += gameState.techTree.speed * 0.1; // +10% per level
+    
+    // Return modified values
+    return {
+      damage: tower.damage * damageMultiplier,
+      range: tower.range * rangeMultiplier,
+      fireRate: tower.fireRate * fireRateMultiplier
+    };
+  }
+  
+  // Apply Weather Effects to Enemy
+  function applyWeatherEffectsToEnemy(enemy) {
+    try {
+      if (!enemy || !enemy.type) {
+        return { speed: enemy ? enemy.speed : 1 };
+      }
+      
+      const weather = weatherTypes[gameState.currentWeather] || weatherTypes.normal;
+      const effects = weather.effects || {};
+      let speedMultiplier = 1;
+      
+      // Apply global effects if any
+      if (effects.enemyDebuffs && effects.enemyDebuffs.global) {
+        if (effects.enemyDebuffs.global.speed) speedMultiplier += effects.enemyDebuffs.global.speed;
+      }
+      
+      // Apply enemy-type specific effects
+      if (effects.enemyBuffs && effects.enemyBuffs[enemy.type]) {
+        if (effects.enemyBuffs[enemy.type].speed) speedMultiplier += effects.enemyBuffs[enemy.type].speed;
+      }
+      
+      // Return modified values
+      return {
+        speed: enemy.speed * speedMultiplier
+      };
+    } catch (error) {
+      console.error('Error al aplicar efectos del clima al enemigo:', error);
+      return { speed: enemy ? enemy.speed : 1 };
     }
   }
   
@@ -1189,6 +2170,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Draw map
     drawMap();
     
+    // Update weather timer
+    gameState.weatherTimer -= deltaTime;
+    if (gameState.weatherTimer <= 0) {
+      changeWeather();
+    }
+    updateWeatherDisplay();
+    
     // Update wave timer if not active
     if (!gameState.isWaveActive && !gameState.waveCompleted) {
       gameState.waveTimer -= deltaTime;
@@ -1196,11 +2184,14 @@ document.addEventListener('DOMContentLoaded', function() {
         startWave();
       } else {
         // Update timer display
-        document.getElementById('waveTimerValue').textContent = Math.ceil(gameState.waveTimer);
-        document.getElementById('waveTimer').style.display = 'block';
+        const waveTimerValue = document.getElementById('waveTimerValue');
+        const waveTimer = document.getElementById('waveTimer');
+        if (waveTimerValue) waveTimerValue.textContent = Math.ceil(gameState.waveTimer);
+        if (waveTimer) waveTimer.style.display = 'block';
       }
     } else {
-      document.getElementById('waveTimer').style.display = 'none';
+      const waveTimer = document.getElementById('waveTimer');
+      if (waveTimer) waveTimer.style.display = 'none';
     }
     
     // Spawn enemies
@@ -1267,8 +2258,8 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Draw map
   function drawMap() {
-    // Draw grid
-    ctx.strokeStyle = '#ddd';
+    // Draw subtle grid
+    ctx.strokeStyle = 'rgba(200, 200, 200, 0.3)';
     ctx.lineWidth = 0.5;
     
     for (let x = 0; x < map.width; x += map.tileSize) {
@@ -1285,11 +2276,17 @@ document.addEventListener('DOMContentLoaded', function() {
       ctx.stroke();
     }
     
-    // Draw path
-    ctx.strokeStyle = 'var(--path-color)';
-    ctx.lineWidth = map.tileSize - 4;
+    // Draw path with better visuals
+    ctx.strokeStyle = '#d2b48c';
+    ctx.lineWidth = map.tileSize - 8;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
+    
+    // Draw path shadow
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+    ctx.shadowBlur = 4;
+    ctx.shadowOffsetX = 2;
+    ctx.shadowOffsetY = 2;
     
     ctx.beginPath();
     ctx.moveTo(map.path[0].x, map.path[0].y);
@@ -1300,21 +2297,56 @@ document.addEventListener('DOMContentLoaded', function() {
     
     ctx.stroke();
     
-    // Draw start and end points
-    ctx.fillStyle = 'green';
+    // Reset shadow
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+    
+    // Draw start point (spawn)
+    ctx.fillStyle = '#2ecc71';
     ctx.beginPath();
-    ctx.arc(map.path[0].x, map.path[0].y, 10, 0, Math.PI * 2);
+    ctx.arc(map.path[0].x, map.path[0].y, 12, 0, Math.PI * 2);
     ctx.fill();
     
-    ctx.fillStyle = 'red';
+    // Draw start point border
+    ctx.strokeStyle = '#27ae60';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    // Draw end point (base)
+    ctx.fillStyle = '#e74c3c';
     ctx.beginPath();
-    ctx.arc(map.path[map.path.length - 1].x, map.path[map.path.length - 1].y, 10, 0, Math.PI * 2);
+    ctx.arc(map.path[map.path.length - 1].x, map.path[map.path.length - 1].y, 12, 0, Math.PI * 2);
     ctx.fill();
+    
+    // Draw end point border
+    ctx.strokeStyle = '#c0392b';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    // Add spawn and base icons
+    ctx.fillStyle = 'white';
+    ctx.font = '16px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    // Spawn icon
+    ctx.fillText('➤', map.path[0].x, map.path[0].y);
+    
+    // Base icon
+    ctx.fillText('🏠', map.path[map.path.length - 1].x, map.path[map.path.length - 1].y);
   }
   
   // Draw towers
   function drawTowers() {
     for (const tower of gameState.towers) {
+      // Draw tower shadow
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+      ctx.beginPath();
+      ctx.arc(tower.x + 2, tower.y + 2, map.tileSize / 3, 0, Math.PI * 2);
+      ctx.fill();
+      
       if (tower.type === 'basic' && imagenCargada && torreBasica.complete) {
         try {
           // Dibujar la imagen de la torre sin rotación
@@ -1328,10 +2360,13 @@ document.addEventListener('DOMContentLoaded', function() {
           
           // Indicador de nivel de la torre
           ctx.fillStyle = 'white';
-          ctx.font = '10px Arial';
+          ctx.strokeStyle = 'black';
+          ctx.lineWidth = 2;
+          ctx.font = 'bold 12px Arial';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillText(tower.level, tower.x, tower.y - towerSize/2 - 5);
+          ctx.strokeText(tower.level, tower.x, tower.y - towerSize/2 - 8);
+          ctx.fillText(tower.level, tower.x, tower.y - towerSize/2 - 8);
         } catch (error) {
           console.error('Error al dibujar la torre:', error);
           dibujarTorreFallback(tower);
@@ -1343,28 +2378,56 @@ document.addEventListener('DOMContentLoaded', function() {
       
       // Indicador de rango para la torre seleccionada
       if (tower === gameState.selectedTower) {
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(163, 198, 68, 0.6)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
         ctx.beginPath();
         ctx.arc(tower.x, tower.y, tower.range, 0, Math.PI * 2);
         ctx.stroke();
+        ctx.setLineDash([]);
       }
     }
   }
   
   // Función para dibujar torre fallback
   function dibujarTorreFallback(tower) {
+    // Draw tower base
     ctx.fillStyle = tower.color;
     ctx.beginPath();
     ctx.arc(tower.x, tower.y, map.tileSize / 3, 0, Math.PI * 2);
     ctx.fill();
     
-    // Indicador de nivel de la torre
+    // Draw tower border
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    // Draw tower icon based on type
     ctx.fillStyle = 'white';
-    ctx.font = '10px Arial';
+    ctx.font = '16px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(tower.level, tower.x, tower.y);
+    
+    const icons = {
+      basic: '🐜',
+      shooter: '🏹',
+      bomber: '💣',
+      poison: '☠️',
+      fire: '🔥',
+      ice: '❄️',
+      carnivore: '🥩',
+      queen: '👑'
+    };
+    
+    ctx.fillText(icons[tower.type] || '🐜', tower.x, tower.y);
+    
+    // Indicador de nivel de la torre
+    ctx.fillStyle = 'white';
+    ctx.strokeStyle = 'black';
+    ctx.lineWidth = 2;
+    ctx.font = 'bold 12px Arial';
+    ctx.strokeText(tower.level, tower.x, tower.y - map.tileSize/2 - 8);
+    ctx.fillText(tower.level, tower.x, tower.y - map.tileSize/2 - 8);
   }
   
   // Draw enemies

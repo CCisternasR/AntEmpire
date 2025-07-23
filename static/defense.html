@@ -32,7 +32,7 @@
 
   <!-- Layout principal: sidebar izquierda, contenido, panel de control -->
   <div class="dashboard">
-    <!-- Panel lateral: Recursos y Torres -->
+    <!-- Panel lateral: Solo Recursos -->
     <aside class="card">
       <h2>Recursos</h2>
       <div class="resources-container">
@@ -41,71 +41,113 @@
         <div class="resource" id="wave">🌊 Oleada: <span class="resource-value">1</span>/10</div>
       </div>
       
-      <h2>Torres Disponibles</h2>
-      <div class="towers-container">
-        <div class="tower-option" data-type="basic" draggable="true">
-          <div class="tower-icon basic-tower">🐜</div>
-          <div class="tower-info">
-            <div class="tower-name">Hormiga Soldado</div>
-            <div class="tower-cost">Coste: 10 🍃</div>
-          </div>
-        </div>
-        
-        <div class="tower-option" data-type="shooter" draggable="true">
-          <div class="tower-icon shooter-tower">🏹</div>
-          <div class="tower-info">
-            <div class="tower-name">Hormiga Arquera</div>
-            <div class="tower-cost">Coste: 20 🍃</div>
-          </div>
-        </div>
-        
-        <div class="tower-option" data-type="bomber" draggable="true">
-          <div class="tower-icon bomber-tower">💣</div>
-          <div class="tower-info">
-            <div class="tower-name">Hormiga Bombardera</div>
-            <div class="tower-cost">Coste: 30 🍃</div>
-          </div>
-        </div>
-      </div>
-      
       <div class="button-group">
         <button id="startWaveBtn" class="action-btn">Iniciar Oleada</button>
         <button id="speedBtn" class="action-btn">Velocidad: x1</button>
+        <button id="newMapBtn" class="action-btn">Nuevo Mapa</button>
       </div>
     </aside>
 
     <!-- Zona principal: mapa de juego -->
     <main class="card">
       <div id="gameContainer">
-        <canvas id="gameCanvas" width="600" height="400"></canvas>
+        <canvas id="gameCanvas" width="800" height="500"></canvas>
         <div id="gameOverlay">
           <div id="gameMessage">¡Prepárate para defender!</div>
           <button id="startGameBtn" class="action-btn">Comenzar Juego</button>
         </div>
         
-        <!-- Panel de selección de torres para colocación rápida -->
-        <div id="towerSelectionPanel" class="tower-selection-panel">
-          <div class="tower-select-btn" data-type="basic">
-            <div class="tower-icon basic-tower">🐜</div>
-            <span>10 🍃</span>
-          </div>
-          <div class="tower-select-btn" data-type="shooter">
-            <div class="tower-icon shooter-tower">🏹</div>
-            <span>20 🍃</span>
-          </div>
-          <div class="tower-select-btn" data-type="bomber">
-            <div class="tower-icon bomber-tower">💣</div>
-            <span>30 🍃</span>
-          </div>
-          <div class="tower-select-btn cancel-btn" id="cancelTowerSelection">
-            <div class="tower-icon cancel-tower">❌</div>
-            <span>Cancelar</span>
-          </div>
-        </div>
+
         
         <!-- Temporizador de oleada -->
         <div id="waveTimer" class="wave-timer">
-          Próxima oleada: <span id="waveTimerValue">30</span>s
+          Oleada: <span id="waveTimerValue">3</span>s
+        </div>
+        
+        <!-- Indicador de clima -->
+        <div id="weatherIndicator" class="weather-indicator">
+          <div class="weather-icon" id="weatherIcon">☀️</div>
+          <div class="weather-name" id="weatherName">Normal</div>
+        </div>
+        
+        <!-- Indicador de recursos en el mapa -->
+        <div id="mapResources" class="map-resources">
+          <span>🍃 <span id="mapLeaves">50</span></span>
+          <span>❤️ <span id="mapHealth">100</span></span>
+        </div>
+        
+        <!-- Controles fijos para móviles -->
+        <div class="mobile-controls">
+          <button id="mobileStartWaveBtn" class="mobile-btn">Oleada</button>
+          <button id="mobileNewMapBtn" class="mobile-btn">Mapa</button>
+          <div class="mobile-speed">x<span id="mobileSpeedValue">10</span></div>
+        </div>
+        
+      </div>
+      
+      <!-- Barra de herramientas expandida -->
+      <div id="toolbarPanel" class="toolbar-panel">
+        <div class="toolbar-towers">
+          <div class="towers-scroll-container">
+            <div class="towers-scroll-content">
+              <div class="toolbar-btn" data-type="basic" title="Hormiga Soldado - 10 hojas">
+                <div class="toolbar-icon">🐜</div>
+                <span>10</span>
+              </div>
+              <div class="toolbar-btn" data-type="shooter" title="Hormiga Arquera - 20 hojas">
+                <div class="toolbar-icon">🏹</div>
+                <span>20</span>
+              </div>
+              <div class="toolbar-btn" data-type="bomber" title="Hormiga Bombardera - 30 hojas">
+                <div class="toolbar-icon">💣</div>
+                <span>30</span>
+              </div>
+              <div class="toolbar-btn" data-type="poison" title="Hormiga Venenosa - 25 hojas">
+                <div class="toolbar-icon">☠️</div>
+                <span>25</span>
+              </div>
+              <div class="toolbar-btn" data-type="fire" title="Hormiga de Fuego - 35 hojas">
+                <div class="toolbar-icon">🔥</div>
+                <span>35</span>
+              </div>
+              <div class="toolbar-btn" data-type="ice" title="Hormiga de Hielo - 40 hojas">
+                <div class="toolbar-icon">❄️</div>
+                <span>40</span>
+              </div>
+              <div class="toolbar-btn" data-type="carnivore" title="Hormiga Carnívora - 50 hojas">
+                <div class="toolbar-icon">🥩</div>
+                <span>50</span>
+              </div>
+              <div class="toolbar-btn" data-type="queen" title="Hormiga Reina - 100 hojas">
+                <div class="toolbar-icon">👑</div>
+                <span>100</span>
+              </div>
+              <div class="toolbar-btn cancel-btn" id="cancelTowerSelection" title="Cancelar selección">
+                <div class="toolbar-icon">❌</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="toolbar-info" id="toolbarTowerInfo">
+          <div class="toolbar-current-info">
+            <div class="toolbar-info-title">Torre Actual</div>
+            <div class="toolbar-info-content" id="currentTowerInfo">
+              <p>Selecciona una torre</p>
+            </div>
+          </div>
+          
+          <div class="toolbar-upgrade-info">
+            <div class="toolbar-info-title">Próximo Nivel</div>
+            <div class="toolbar-info-content" id="upgradeTowerInfo">
+              <p>-</p>
+            </div>
+          </div>
+          
+          <div class="toolbar-actions">
+            <button id="toolbarSellBtn" class="toolbar-action-btn danger" disabled>Vender</button>
+            <button id="toolbarUpgradeBtn" class="toolbar-action-btn" disabled>Mejorar</button>
+          </div>
         </div>
       </div>
       
@@ -131,25 +173,39 @@
       </div>
     </main>
 
-    <!-- Panel derecho: Información y Mejoras -->
+    <!-- Panel derecho: Solo Tecnologías -->
     <aside class="card">
-      <h2>Información</h2>
-      <div id="towerInfo">
-        <p>Selecciona una torre para ver su información</p>
+      <h2>Tecnologías <span id="techPoints" class="tech-points">0 🔮</span></h2>
+      <div id="techTree" class="tech-tree">
+        <div class="tech-option">
+          <span>Daño</span>
+          <div class="tech-level" id="techDamage">○○○○○</div>
+          <button id="upgradeDamage" class="tech-btn" disabled>Mejorar (1 🔮)</button>
+        </div>
+        <div class="tech-option">
+          <span>Alcance</span>
+          <div class="tech-level" id="techRange">○○○○○</div>
+          <button id="upgradeRange" class="tech-btn" disabled>Mejorar (1 🔮)</button>
+        </div>
+        <div class="tech-option">
+          <span>Velocidad</span>
+          <div class="tech-level" id="techSpeed">○○○○○</div>
+          <button id="upgradeSpeed" class="tech-btn" disabled>Mejorar (1 🔮)</button>
+        </div>
       </div>
       
-      <h2>Mejoras</h2>
-      <div id="upgradePanel">
-        <p>Selecciona una torre colocada para mejorarla</p>
-      </div>
-      
-      <div class="button-group">
+      <!-- Elementos ocultos para compatibilidad -->
+      <div id="towerInfo" style="display: none;"></div>
+      <div id="upgradePanel" style="display: none;"></div>
+      <div style="display: none;">
         <button id="sellTowerBtn" class="danger-btn" disabled>Vender Torre</button>
         <button id="upgradeTowerBtn" class="action-btn" disabled>Mejorar Torre</button>
         <button id="deselectTowerBtn" class="action-btn">Deseleccionar</button>
       </div>
     </aside>
   </div>
+  
+
   
   <!-- Panel inferior para dispositivos móviles -->
   <div id="mobilePanel" class="mobile-panel">
@@ -172,6 +228,19 @@
           <li><strong>Hormiga Soldado (🐜)</strong>: Ataque básico de corto alcance</li>
           <li><strong>Hormiga Arquera (🏹)</strong>: Ataque a distancia</li>
           <li><strong>Hormiga Bombardera (💣)</strong>: Ataque de área</li>
+          <li><strong>Hormiga Venenosa (☠️)</strong>: Envenena a los enemigos causando daño continuo</li>
+          <li><strong>Hormiga de Fuego (🔥)</strong>: Quema a los enemigos causando daño por tiempo</li>
+          <li><strong>Hormiga de Hielo (❄️)</strong>: Ralentiza a los enemigos</li>
+          <li><strong>Hormiga Carnívora (🥩)</strong>: Alto daño con probabilidad de devorar enemigos</li>
+          <li><strong>Hormiga Reina (👑)</strong>: Genera hormigas soldado y mejora torres cercanas</li>
+        </ul>
+        
+        <h3>Elementos</h3>
+        <ul>
+          <li><strong>Normal</strong>: Sin efectos especiales</li>
+          <li><strong>Veneno</strong>: Daño continuo durante varios segundos</li>
+          <li><strong>Fuego</strong>: Daño por quemadura</li>
+          <li><strong>Hielo</strong>: Ralentiza a los enemigos</li>
         </ul>
         
         <h3>Enemigos</h3>

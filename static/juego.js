@@ -177,6 +177,59 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btnGuerrera').onclick=trainWarrior;
   document.getElementById('btnAtaque').onclick=enemyAttack;
   document.getElementById('btnTowerDefense').onclick=function() {
+    // Mostrar información sobre las torres disponibles antes de ir al juego
+    const towerTypes = [
+      { name: "Hormiga Soldado", element: "normal", rarity: "común" },
+      { name: "Hormiga Arquera", element: "normal", rarity: "común" },
+      { name: "Hormiga Bombardera", element: "normal", rarity: "rara" },
+      { name: "Hormiga Venenosa", element: "veneno", rarity: "rara" },
+      { name: "Hormiga de Fuego", element: "fuego", rarity: "rara" },
+      { name: "Hormiga de Hielo", element: "hielo", rarity: "rara" },
+      { name: "Hormiga Carnívora", element: "normal", rarity: "mítica" },
+      { name: "Hormiga Reina", element: "normal", rarity: "legendaria" }
+    ];
+    
+    // Mostrar mensaje con las torres disponibles
+    const unlockedTowers = ["Hormiga Soldado", "Hormiga Arquera", "Hormiga Bombardera"];
+    const nextUnlock = levelCombat >= 3 ? "Hormiga Venenosa" : 
+                      levelCombat >= 5 ? "Hormiga de Fuego" : 
+                      levelCombat >= 7 ? "Hormiga de Hielo" : 
+                      levelCombat >= 9 ? "Hormiga Carnívora" : 
+                      levelCombat >= 12 ? "Hormiga Reina" : "";
+    
+    // Desbloquear nuevas torres según el nivel de combate
+    if (levelCombat >= 3 && !unlockedTowers.includes("Hormiga Venenosa")) {
+      unlockedTowers.push("Hormiga Venenosa");
+      log("🔓 ¡Has desbloqueado la torre Hormiga Venenosa!");
+    }
+    if (levelCombat >= 5 && !unlockedTowers.includes("Hormiga de Fuego")) {
+      unlockedTowers.push("Hormiga de Fuego");
+      log("🔓 ¡Has desbloqueado la torre Hormiga de Fuego!");
+    }
+    if (levelCombat >= 7 && !unlockedTowers.includes("Hormiga de Hielo")) {
+      unlockedTowers.push("Hormiga de Hielo");
+      log("🔓 ¡Has desbloqueado la torre Hormiga de Hielo!");
+    }
+    if (levelCombat >= 9 && !unlockedTowers.includes("Hormiga Carnívora")) {
+      unlockedTowers.push("Hormiga Carnívora");
+      log("🔓 ¡Has desbloqueado la torre Hormiga Carnívora!");
+    }
+    if (levelCombat >= 12 && !unlockedTowers.includes("Hormiga Reina")) {
+      unlockedTowers.push("Hormiga Reina");
+      log("🔓 ¡Has desbloqueado la torre Hormiga Reina!");
+    }
+    
+    // Guardar torres desbloqueadas en localStorage para que defense.js las lea
+    localStorage.setItem('unlockedTowers', JSON.stringify(unlockedTowers));
+    
+    // Mostrar mensaje sobre torres disponibles
+    if (nextUnlock) {
+      log(`🎮 Iniciando Tower Defense con ${unlockedTowers.length} tipos de torres. Próximo desbloqueo: ${nextUnlock} (Nivel ${levelCombat >= 3 ? 5 : levelCombat >= 5 ? 7 : levelCombat >= 7 ? 9 : levelCombat >= 9 ? 12 : 3} de combatientes)`);
+    } else {
+      log(`🎮 Iniciando Tower Defense con ${unlockedTowers.length} tipos de torres. ¡Has desbloqueado todas las torres!`);
+    }
+    
+    // Redirigir al juego
     window.location.href='/defense.html';
   };
   
