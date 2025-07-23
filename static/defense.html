@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <meta name="description" content="AntEmpire Tower Defense - Defiende tu hormiguero" />
   <title>AntEmpire - Tower Defense 🐜</title>
   <link rel="stylesheet" href="/static/defense.css">
@@ -27,7 +27,7 @@
   <!-- Título central y versión -->
   <header>
     <h1>AntEmpire – Tower Defense</h1>
-    <div class="version">v1.2</div>
+    <div class="version">v2.0</div>
   </header>
 
   <!-- Layout principal: sidebar izquierda, contenido, panel de control -->
@@ -82,6 +82,31 @@
           <div id="gameMessage">¡Prepárate para defender!</div>
           <button id="startGameBtn" class="action-btn">Comenzar Juego</button>
         </div>
+        
+        <!-- Panel de selección de torres para colocación rápida -->
+        <div id="towerSelectionPanel" class="tower-selection-panel">
+          <div class="tower-select-btn" data-type="basic">
+            <div class="tower-icon basic-tower">🐜</div>
+            <span>10 🍃</span>
+          </div>
+          <div class="tower-select-btn" data-type="shooter">
+            <div class="tower-icon shooter-tower">🏹</div>
+            <span>20 🍃</span>
+          </div>
+          <div class="tower-select-btn" data-type="bomber">
+            <div class="tower-icon bomber-tower">💣</div>
+            <span>30 🍃</span>
+          </div>
+          <div class="tower-select-btn cancel-btn" id="cancelTowerSelection">
+            <div class="tower-icon cancel-tower">❌</div>
+            <span>Cancelar</span>
+          </div>
+        </div>
+        
+        <!-- Temporizador de oleada -->
+        <div id="waveTimer" class="wave-timer">
+          Próxima oleada: <span id="waveTimerValue">30</span>s
+        </div>
       </div>
       
       <div class="game-controls">
@@ -96,6 +121,13 @@
       <div class="log-container">
         <h3>Registro de Batalla <button id="clearLog" class="small-btn" title="Limpiar registro">🗑️</button></h3>
         <div class="log" id="battleLog"></div>
+      </div>
+      
+      <!-- Menú contextual para torres -->
+      <div id="towerContextMenu" class="tower-context-menu">
+        <button id="upgradeTowerContextBtn" class="context-btn">Mejorar</button>
+        <button id="sellTowerContextBtn" class="context-btn danger-btn">Vender</button>
+        <button id="cancelContextBtn" class="context-btn">Cancelar</button>
       </div>
     </main>
 
@@ -114,8 +146,16 @@
       <div class="button-group">
         <button id="sellTowerBtn" class="danger-btn" disabled>Vender Torre</button>
         <button id="upgradeTowerBtn" class="action-btn" disabled>Mejorar Torre</button>
+        <button id="deselectTowerBtn" class="action-btn">Deseleccionar</button>
       </div>
     </aside>
+  </div>
+  
+  <!-- Panel inferior para dispositivos móviles -->
+  <div id="mobilePanel" class="mobile-panel">
+    <div class="mobile-resource">🍃 <span id="mobileLeaves">50</span></div>
+    <div class="mobile-resource">❤️ <span id="mobileHealth">100</span></div>
+    <div class="mobile-resource">🌊 <span id="mobileWave">1/10</span></div>
   </div>
   
   <!-- Modal de ayuda -->

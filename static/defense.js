@@ -1,16 +1,22 @@
 // Tower Defense Game for AntEmpire
 document.addEventListener('DOMContentLoaded', function() {
-  // Cargar la imagen de la torre básica
+  // Cargar la imagen de la torre básica o usar un fallback
   const torreBasica = new Image();
-  torreBasica.src = '/static/images/torreBasica.png';
+  torreBasica.src = 'static/images/torreBasica.png';
+  
+  // Variable para controlar si la imagen se cargó correctamente
+  let imagenCargada = false;
   
   // Debug image loading
   torreBasica.onload = function() {
     console.log('Torre básica cargada correctamente');
+    imagenCargada = true;
   };
   
   torreBasica.onerror = function() {
-    console.error('Error al cargar la imagen de la torre básica');
+    console.error('Error al cargar la imagen de la torre básica - usando fallback');
+    // No intentar usar la imagen si hay error
+    imagenCargada = false;
   };
   
   // Configuración simple para torres
@@ -45,6 +51,7 @@ document.addEventListener('DOMContentLoaded', function() {
     health: 100,
     maxHealth: 100,
     selectedTower: null,
+    selectedTowerType: null, // Para la selección de torres
     towers: [],
     enemies: [],
     projectiles: [],
@@ -52,7 +59,12 @@ document.addEventListener('DOMContentLoaded', function() {
     enemySpawnTimer: 0,
     enemiesSpawned: 0,
     enemiesPerWave: 10,
-    waveCompleted: false
+    waveCompleted: false,
+    waveTimer: 30, // Temporizador para la próxima oleada
+    showRangePreview: false, // Para mostrar la previsualización del rango
+    rangePreviewX: 0,
+    rangePreviewY: 0,
+    rangePreviewRadius: 0
   };
   
   // Game Map
@@ -209,13 +221,157 @@ document.addEventListener('DOMContentLoaded', function() {
     // Setup drag and drop for towers
     setupTowerDragDrop();
     
+    // Setup tower selection panel
+    setupTowerSelectionPanel();
+    
+    // Setup tower context menu
+    setupTowerContextMenu();
+    
+    // Hide wave timer initially
+    document.getElementById('waveTimer').style.display = 'none';
+    
     // Event listeners
     startGameBtn.addEventListener('click', startGame);
     startWaveBtn.addEventListener('click', startWave);
     speedBtn.addEventListener('click', toggleGameSpeed);
     sellTowerBtn.addEventListener('click', sellSelectedTower);
     upgradeTowerBtn.addEventListener('click', upgradeSelectedTower);
+    document.getElementById('deselectTowerBtn').addEventListener('click', deselectTower);
     canvas.addEventListener('click', handleCanvasClick);
+    
+    // Mouse move for range preview
+    canvas.addEventListener('mousemove', handleMouseMove);
+    
+    // Touch events for mobile
+    canvas.addEventListener('touchstart', handleTouchStart);
+    canvas.addEventListener('touchmove', handleTouchMove);
+    canvas.addEventListener('touchend', handleTouchEnd);
+    
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+      // Escape key to deselect tower and cancel tower placement
+      if (e.key === 'Escape') {
+        if (gameState.selectedTowerType) {
+          // Cancel tower placement
+          gameState.selectedTowerType = null;
+          gameState.showRangePreview = false;
+          document.querySelectorAll('.tower-select-btn').forEach(b => b.classList.remove('selected'));
+        } else if (gameState.selectedTower) {
+          // Deselect tower
+          deselectTower();
+        }
+      }
+    });
+  }
+  
+  // Setup tower selection panel
+  function setupTowerSelectionPanel() {
+    const towerSelectBtns = document.querySelectorAll('.tower-select-btn');
+    const cancelBtn = document.getElementById('cancelTowerSelection');
+    
+    towerSelectBtns.forEach(btn => {
+      if (btn.id !== 'cancelTowerSelection') {
+        btn.addEventListener('click', function() {
+          // Deselect all buttons
+          towerSelectBtns.forEach(b => b.classList.remove('selected'));
+          
+          // Select this button
+          this.classList.add('selected');
+          
+          // Set selected tower type
+          gameState.selectedTowerType = this.dataset.type;
+          
+          // Show range preview
+          gameState.showRangePreview = true;
+          gameState.rangePreviewRadius = towerTypes[gameState.selectedTowerType].range;
+        });
+      }
+    });
+    
+    // Setup cancel button
+    cancelBtn.addEventListener('click', function() {
+      // Deselect all buttons
+      towerSelectBtns.forEach(b => b.classList.remove('selected'));
+      
+      // Clear tower selection
+      gameState.selectedTowerType = null;
+      gameState.showRangePreview = false;
+      
+      // Also deselect any selected tower
+      deselectTower();
+    });
+  }
+  
+  // Setup tower context menu
+  function setupTowerContextMenu() {
+    const contextMenu = document.getElementById('towerContextMenu');
+    const upgradeBtn = document.getElementById('upgradeTowerContextBtn');
+    const sellBtn = document.getElementById('sellTowerContextBtn');
+    const cancelBtn = document.getElementById('cancelContextBtn');
+    
+    upgradeBtn.addEventListener('click', function() {
+      if (gameState.selectedTower) {
+        upgradeSelectedTower();
+        hideContextMenu();
+      }
+    });
+    
+    sellBtn.addEventListener('click', function() {
+      if (gameState.selectedTower) {
+        sellSelectedTower();
+        hideContextMenu();
+      }
+    });
+    
+    cancelBtn.addEventListener('click', hideContextMenu);
+    
+    function hideContextMenu() {
+      contextMenu.style.display = 'none';
+    }
+    
+    // Close context menu when clicking outside
+    document.addEventListener('click', function(e) {
+      if (!contextMenu.contains(e.target) && e.target !== contextMenu) {
+        hideContextMenu();
+      }
+    });
+  }
+  
+  // Show context menu for tower
+  function showContextMenu(tower, x, y) {
+    const contextMenu = document.getElementById('towerContextMenu');
+    const upgradeBtn = document.getElementById('upgradeTowerContextBtn');
+    
+    // Update upgrade button text
+    const upgradeCost = Math.floor(towerTypes[tower.type].upgradeCost * Math.pow(tower.level, 1.5));
+    upgradeBtn.textContent = `Mejorar (${upgradeCost} 🍃)`;
+    upgradeBtn.disabled = gameState.resources < upgradeCost;
+    
+    // Update sell button text
+    const sellValue = Math.floor(getTowerTotalCost(tower) * 0.7);
+    document.getElementById('sellTowerContextBtn').textContent = `Vender (+${sellValue} 🍃)`;
+    
+    // Position and show menu
+    contextMenu.style.display = 'flex';
+    
+    // Adjust position to keep menu within viewport
+    const rect = canvas.getBoundingClientRect();
+    let menuX = x;
+    let menuY = y;
+    
+    const menuWidth = contextMenu.offsetWidth;
+    const menuHeight = contextMenu.offsetHeight;
+    
+    if (menuX + menuWidth > rect.right) {
+      menuX = rect.right - menuWidth - 10;
+    }
+    
+    if (menuY + menuHeight > rect.bottom) {
+      menuY = rect.bottom - menuHeight - 10;
+    }
+    
+    contextMenu.style.left = `${menuX}px`;
+    contextMenu.style.top = `${menuY}px`;
   }
   
   // Setup tower drag and drop
@@ -332,40 +488,199 @@ document.addEventListener('DOMContentLoaded', function() {
     );
   }
   
-  // Handle canvas click (select tower)
+  // Handle canvas click (select tower or place tower)
   function handleCanvasClick(e) {
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     
+    // Hide context menu
+    document.getElementById('towerContextMenu').style.display = 'none';
+    
+    // If a tower type is selected, try to place it
+    if (gameState.selectedTowerType) {
+      placeTowerAtPosition(gameState.selectedTowerType, x, y);
+      return;
+    }
+    
+    // Check if clicked on a tower
+    const tower = getTowerAtPosition(x, y);
+    
+    // If clicked on the currently selected tower, deselect it
+    if (tower === gameState.selectedTower) {
+      deselectTower();
+      return;
+    }
+    
+    // Otherwise, try to select a tower
+    selectTowerAtPosition(x, y, e.clientX, e.clientY);
+  }
+  
+  // Deselect current tower
+  function deselectTower() {
+    gameState.selectedTower = null;
+    sellTowerBtn.disabled = true;
+    upgradeTowerBtn.disabled = true;
+    document.getElementById('towerInfo').innerHTML = '<p>Selecciona una torre para ver su información</p>';
+    document.getElementById('upgradePanel').innerHTML = '<p>Selecciona una torre colocada para mejorarla</p>';
+  }
+  
+  // Handle mouse move for range preview
+  function handleMouseMove(e) {
+    if (gameState.showRangePreview && gameState.selectedTowerType) {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      
+      // Round to grid
+      gameState.rangePreviewX = Math.floor(x / map.tileSize) * map.tileSize + map.tileSize / 2;
+      gameState.rangePreviewY = Math.floor(y / map.tileSize) * map.tileSize + map.tileSize / 2;
+    }
+  }
+  
+  // Handle touch start
+  function handleTouchStart(e) {
+    e.preventDefault(); // Prevent scrolling
+    
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      const rect = canvas.getBoundingClientRect();
+      const x = touch.clientX - rect.left;
+      const y = touch.clientY - rect.top;
+      
+      // Store touch start position and time for long press detection
+      gameState.touchStartX = x;
+      gameState.touchStartY = y;
+      gameState.touchStartTime = Date.now();
+      
+      // Check if touching a tower for potential long press
+      gameState.touchedTower = getTowerAtPosition(x, y);
+      
+      // If a tower type is selected, show range preview
+      if (gameState.selectedTowerType) {
+        gameState.showRangePreview = true;
+        gameState.rangePreviewX = Math.floor(x / map.tileSize) * map.tileSize + map.tileSize / 2;
+        gameState.rangePreviewY = Math.floor(y / map.tileSize) * map.tileSize + map.tileSize / 2;
+      }
+    }
+  }
+  
+  // Handle touch move
+  function handleTouchMove(e) {
+    e.preventDefault(); // Prevent scrolling
+    
+    if (e.touches.length === 1 && gameState.showRangePreview && gameState.selectedTowerType) {
+      const touch = e.touches[0];
+      const rect = canvas.getBoundingClientRect();
+      const x = touch.clientX - rect.left;
+      const y = touch.clientY - rect.top;
+      
+      // Update range preview position
+      gameState.rangePreviewX = Math.floor(x / map.tileSize) * map.tileSize + map.tileSize / 2;
+      gameState.rangePreviewY = Math.floor(y / map.tileSize) * map.tileSize + map.tileSize / 2;
+      
+      // Cancel long press if moved too far
+      if (gameState.touchedTower && 
+          (Math.abs(x - gameState.touchStartX) > 10 || 
+           Math.abs(y - gameState.touchStartY) > 10)) {
+        gameState.touchedTower = null;
+      }
+    }
+  }
+  
+  // Handle touch end
+  function handleTouchEnd(e) {
+    e.preventDefault(); // Prevent default behavior
+    
+    const now = Date.now();
+    const rect = canvas.getBoundingClientRect();
+    
+    // Check for long press on tower (500ms)
+    if (gameState.touchedTower && (now - gameState.touchStartTime) >= 500) {
+      // Show context menu for tower
+      const tower = gameState.touchedTower;
+      gameState.selectedTower = tower;
+      
+      // Calculate position for context menu
+      const menuX = rect.left + tower.x;
+      const menuY = rect.top + tower.y;
+      
+      showContextMenu(tower, menuX, menuY);
+      updateTowerInfoPanel(tower);
+    } 
+    // Normal tap
+    else if (e.changedTouches.length === 1) {
+      const touch = e.changedTouches[0];
+      const x = touch.clientX - rect.left;
+      const y = touch.clientY - rect.top;
+      
+      // If a tower type is selected, place it
+      if (gameState.selectedTowerType) {
+        placeTowerAtPosition(gameState.selectedTowerType, x, y);
+      } 
+      // Otherwise try to select a tower
+      else {
+        selectTowerAtPosition(x, y, touch.clientX, touch.clientY);
+      }
+    }
+    
+    // Reset touch data
+    gameState.touchedTower = null;
+  }
+  
+  // Place tower at position
+  function placeTowerAtPosition(type, x, y) {
+    // Round to grid
+    const gridX = Math.floor(x / map.tileSize) * map.tileSize + map.tileSize / 2;
+    const gridY = Math.floor(y / map.tileSize) * map.tileSize + map.tileSize / 2;
+    
+    // Try to place tower
+    placeTower(type, gridX, gridY);
+  }
+  
+  // Select tower at position
+  function selectTowerAtPosition(x, y, clientX, clientY) {
     // Deselect current tower
     gameState.selectedTower = null;
     sellTowerBtn.disabled = true;
     upgradeTowerBtn.disabled = true;
     
     // Check if clicked on a tower
+    const tower = getTowerAtPosition(x, y);
+    
+    if (tower) {
+      gameState.selectedTower = tower;
+      sellTowerBtn.disabled = false;
+      
+      // Enable upgrade button if player has enough resources
+      const upgradeCost = Math.floor(towerTypes[tower.type].upgradeCost * Math.pow(tower.level, 1.5));
+      upgradeTowerBtn.disabled = gameState.resources < upgradeCost;
+      
+      updateTowerInfoPanel(tower);
+      
+      // Show context menu on mobile
+      if (window.innerWidth <= 768) {
+        showContextMenu(tower, clientX, clientY);
+      }
+    } else {
+      // If no tower selected, clear info panel
+      document.getElementById('towerInfo').innerHTML = '<p>Selecciona una torre para ver su información</p>';
+      document.getElementById('upgradePanel').innerHTML = '<p>Selecciona una torre colocada para mejorarla</p>';
+    }
+  }
+  
+  // Get tower at position
+  function getTowerAtPosition(x, y) {
     for (let i = 0; i < gameState.towers.length; i++) {
       const tower = gameState.towers[i];
       const distance = Math.sqrt(Math.pow(tower.x - x, 2) + Math.pow(tower.y - y, 2));
       
       if (distance <= map.tileSize / 2) {
-        gameState.selectedTower = tower;
-        sellTowerBtn.disabled = false;
-        
-        // Enable upgrade button if player has enough resources
-        const upgradeCost = Math.floor(towerTypes[tower.type].upgradeCost * Math.pow(tower.level, 1.5));
-        upgradeTowerBtn.disabled = gameState.resources < upgradeCost;
-        
-        updateTowerInfoPanel(tower);
-        break;
+        return tower;
       }
     }
     
-    // If no tower selected, clear info panel
-    if (!gameState.selectedTower) {
-      document.getElementById('towerInfo').innerHTML = '<p>Selecciona una torre para ver su información</p>';
-      document.getElementById('upgradePanel').innerHTML = '<p>Selecciona una torre colocada para mejorarla</p>';
-    }
+    return null;
   }
   
   // Update tower info panel
@@ -488,6 +803,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Disable start wave button
     startWaveBtn.disabled = true;
+    
+    // Hide wave timer
+    document.getElementById('waveTimer').style.display = 'none';
     
     logMessage(`¡Oleada ${gameState.wave} iniciada!`);
   }
@@ -782,6 +1100,11 @@ document.addEventListener('DOMContentLoaded', function() {
       // Check if game is won
       if (gameState.wave > gameState.maxWaves) {
         gameOver(true);
+      } else {
+        // Reset wave timer for next wave
+        gameState.waveTimer = 30;
+        document.getElementById('waveTimerValue').textContent = gameState.waveTimer;
+        document.getElementById('waveTimer').style.display = 'block';
       }
     }
   }
@@ -816,6 +1139,11 @@ document.addEventListener('DOMContentLoaded', function() {
   function updateResourceDisplay() {
     document.querySelector('#leaves .resource-value').textContent = gameState.resources;
     document.querySelector('#score .resource-value').textContent = gameState.score;
+    document.querySelector('#wave .resource-value').textContent = `${gameState.wave}/${gameState.maxWaves}`;
+    
+    // Update mobile panel
+    document.getElementById('mobileLeaves').textContent = gameState.resources;
+    document.getElementById('mobileWave').textContent = `${gameState.wave}/${gameState.maxWaves}`;
   }
   
   // Update health display
@@ -830,6 +1158,9 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
       healthBarFill.style.backgroundColor = 'var(--health-bar)';
     }
+    
+    // Update mobile panel
+    document.getElementById('mobileHealth').textContent = gameState.health;
   }
   
   // Log message to battle log
@@ -858,6 +1189,20 @@ document.addEventListener('DOMContentLoaded', function() {
     // Draw map
     drawMap();
     
+    // Update wave timer if not active
+    if (!gameState.isWaveActive && !gameState.waveCompleted) {
+      gameState.waveTimer -= deltaTime;
+      if (gameState.waveTimer <= 0) {
+        startWave();
+      } else {
+        // Update timer display
+        document.getElementById('waveTimerValue').textContent = Math.ceil(gameState.waveTimer);
+        document.getElementById('waveTimer').style.display = 'block';
+      }
+    } else {
+      document.getElementById('waveTimer').style.display = 'none';
+    }
+    
     // Spawn enemies
     if (gameState.isWaveActive && gameState.enemiesSpawned < gameState.enemiesPerWave * gameState.wave) {
       gameState.enemySpawnTimer += deltaTime * gameState.gameSpeed;
@@ -881,11 +1226,43 @@ document.addEventListener('DOMContentLoaded', function() {
     drawEnemies();
     drawProjectiles();
     
+    // Draw range preview if active
+    if (gameState.showRangePreview && gameState.selectedTowerType) {
+      drawRangePreview();
+    }
+    
     // Check wave completion
     checkWaveCompletion();
     
     // Continue game loop
     requestAnimationFrame(gameLoop);
+  }
+  
+  // Draw range preview
+  function drawRangePreview() {
+    const x = gameState.rangePreviewX;
+    const y = gameState.rangePreviewY;
+    const radius = gameState.rangePreviewRadius;
+    
+    // Check if position is valid
+    const isValid = !isOnPath(x, y) && !isTowerAt(x, y);
+    
+    // Draw tower placeholder
+    ctx.globalAlpha = 0.6;
+    ctx.fillStyle = isValid ? towerTypes[gameState.selectedTowerType].color : 'red';
+    ctx.beginPath();
+    ctx.arc(x, y, map.tileSize / 3, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Draw range circle
+    ctx.strokeStyle = isValid ? 'rgba(255, 255, 255, 0.5)' : 'rgba(255, 0, 0, 0.5)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1.0;
   }
   
   // Draw map
@@ -938,7 +1315,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Draw towers
   function drawTowers() {
     for (const tower of gameState.towers) {
-      if (tower.type === 'basic' && torreBasica.complete) {
+      if (tower.type === 'basic' && imagenCargada && torreBasica.complete) {
         try {
           // Dibujar la imagen de la torre sin rotación
           ctx.drawImage(
@@ -957,32 +1334,11 @@ document.addEventListener('DOMContentLoaded', function() {
           ctx.fillText(tower.level, tower.x, tower.y - towerSize/2 - 5);
         } catch (error) {
           console.error('Error al dibujar la torre:', error);
-          
-          // Fallback si hay un error
-          ctx.fillStyle = tower.color;
-          ctx.beginPath();
-          ctx.arc(tower.x, tower.y, map.tileSize / 3, 0, Math.PI * 2);
-          ctx.fill();
-          
-          ctx.fillStyle = 'white';
-          ctx.font = '10px Arial';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(tower.level, tower.x, tower.y);
+          dibujarTorreFallback(tower);
         }
       } else {
         // Fallback para otros tipos de torre o si la imagen no se cargó
-        ctx.fillStyle = tower.color;
-        ctx.beginPath();
-        ctx.arc(tower.x, tower.y, map.tileSize / 3, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Indicador de nivel de la torre
-        ctx.fillStyle = 'white';
-        ctx.font = '10px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(tower.level, tower.x, tower.y);
+        dibujarTorreFallback(tower);
       }
       
       // Indicador de rango para la torre seleccionada
@@ -994,6 +1350,21 @@ document.addEventListener('DOMContentLoaded', function() {
         ctx.stroke();
       }
     }
+  }
+  
+  // Función para dibujar torre fallback
+  function dibujarTorreFallback(tower) {
+    ctx.fillStyle = tower.color;
+    ctx.beginPath();
+    ctx.arc(tower.x, tower.y, map.tileSize / 3, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Indicador de nivel de la torre
+    ctx.fillStyle = 'white';
+    ctx.font = '10px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(tower.level, tower.x, tower.y);
   }
   
   // Draw enemies

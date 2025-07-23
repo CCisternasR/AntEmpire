@@ -22,7 +22,7 @@ def juego():
 
 @app.route("/defense.html")
 def defense():
-    return app.send_static_file("defense.html")
+    return send_from_directory(STATIC_DIR, "defense.html")
 
 # Rutas para sprites eliminadas
 

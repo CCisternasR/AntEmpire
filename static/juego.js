@@ -175,7 +175,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('btnCombatiente').onclick=trainFighter;
   document.getElementById('btnAlimentar').onclick=feedQueen;
+  document.getElementById('btnExploradora').onclick=trainExplorer;
+  document.getElementById('btnGuerrera').onclick=trainWarrior;
   document.getElementById('btnAtaque').onclick=enemyAttack;
+  document.getElementById('btnTowerDefense').onclick=function() {
+    window.location.href='/defense.html';
+  };
+  
+  // Inicializar el juego
+  await cargarEstado();
+  generateMiniMap();
+  updateUI();
+  log('Juego iniciado');
+})();nAtaque').onclick=enemyAttack;
   document.getElementById('btnExploradora').onclick = trainExplorer;
   document.getElementById('btnGuerrera').onclick = trainWarrior;
 
