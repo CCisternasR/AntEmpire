@@ -4,10 +4,67 @@ document.addEventListener('DOMContentLoaded', function() {
   const cespedBasico = new Image();
   cespedBasico.src = '/static/tile/cespedBasico.png';
   
+  // Cargar imágenes de torres
+  const hormigaFuego = new Image();
+  hormigaFuego.src = '/static/images/hormigaFuego.png';
+  
+  const hormigaVeneno = new Image();
+  hormigaVeneno.src = '/static/images/hormigaVeneno.png';
+  
+  const hormigaHielo = new Image();
+  hormigaHielo.src = '/static/images/hormigaHielo.png';
+  
+  const hormigaCarnivora = new Image();
+  hormigaCarnivora.src = '/static/images/hormigaCarnivora.png';
+  
+  const proyectilVeneno = new Image();
+  proyectilVeneno.src = '/static/images/proyectilVeneno.png';
+  
+  const proyectilFuego = new Image();
+  proyectilFuego.src = '/static/images/proyectilFuego.png';
+  
+  const proyectilHielo = new Image();
+  proyectilHielo.src = '/static/images/proyectilHielo.png';
+  
+  const proyectilCarnivora = new Image();
+  proyectilCarnivora.src = '/static/images/proyectilCarnivora.png';
+  
   let cespedBasicoCargado = false;
+  let imagenFuegoCargada = false;
+  let imagenVenenoCargada = false;
+  let imagenHieloCargada = false;
+  let imagenCarnivoraCargada = false;
+  let proyectilVenenoCargado = false;
+  let proyectilFuegoCargado = false;
+  let proyectilHieloCargado = false;
+  let proyectilCarnivoraCargado = false;
   
   cespedBasico.onload = () => cespedBasicoCargado = true;
   cespedBasico.onerror = () => cespedBasicoCargado = false;
+  
+  hormigaFuego.onload = () => imagenFuegoCargada = true;
+  hormigaFuego.onerror = () => imagenFuegoCargada = false;
+  
+  hormigaVeneno.onload = () => imagenVenenoCargada = true;
+  hormigaVeneno.onerror = () => imagenVenenoCargada = false;
+  
+  hormigaHielo.onload = () => imagenHieloCargada = true;
+  hormigaHielo.onerror = () => imagenHieloCargada = false;
+  
+  hormigaCarnivora.onload = () => imagenCarnivoraCargada = true;
+  hormigaCarnivora.onerror = () => imagenCarnivoraCargada = false;
+  
+  proyectilVeneno.onload = () => proyectilVenenoCargado = true;
+  proyectilVeneno.onerror = () => proyectilVenenoCargado = false;
+  
+  proyectilFuego.onload = () => proyectilFuegoCargado = true;
+  proyectilFuego.onerror = () => proyectilFuegoCargado = false;
+  
+  proyectilHielo.onload = () => proyectilHieloCargado = true;
+  proyectilHielo.onerror = () => proyectilHieloCargado = false;
+  
+  proyectilCarnivora.onload = () => proyectilCarnivoraCargado = true;
+  proyectilCarnivora.onerror = () => proyectilCarnivoraCargado = false;
   
   // Configuración simple para torres
   const towerSize = 40; // Tamaño fijo para todas las torres
@@ -2521,8 +2578,76 @@ document.addEventListener('DOMContentLoaded', function() {
       ctx.arc(tower.x + 2, tower.y + 2, map.tileSize / 3, 0, Math.PI * 2);
       ctx.fill();
       
-      // Always use fallback rendering for all towers
-      dibujarTorreFallback(tower);
+      if (tower.type === 'fire' && imagenFuegoCargada && hormigaFuego.complete) {
+        ctx.save();
+        ctx.translate(tower.x, tower.y);
+        if (tower.angle !== undefined) ctx.rotate(tower.angle);
+        ctx.drawImage(hormigaFuego, -towerSize/2, -towerSize/2, towerSize, towerSize);
+        ctx.restore();
+        
+        ctx.fillStyle = 'white';
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 2;
+        ctx.font = 'bold 12px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.strokeText(tower.level, tower.x, tower.y - towerSize/2 - 8);
+        ctx.fillText(tower.level, tower.x, tower.y - towerSize/2 - 8);
+      } else if (tower.type === 'poison' && imagenVenenoCargada && hormigaVeneno.complete) {
+        ctx.save();
+        ctx.translate(tower.x, tower.y);
+        if (tower.angle !== undefined) ctx.rotate(tower.angle);
+        ctx.drawImage(hormigaVeneno, -towerSize/2, -towerSize/2, towerSize, towerSize);
+        ctx.restore();
+        
+        ctx.fillStyle = 'white';
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 2;
+        ctx.font = 'bold 12px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.strokeText(tower.level, tower.x, tower.y - towerSize/2 - 8);
+        ctx.fillText(tower.level, tower.x, tower.y - towerSize/2 - 8);
+      } else if (tower.type === 'ice' && imagenHieloCargada && hormigaHielo.complete) {
+        ctx.save();
+        ctx.translate(tower.x, tower.y);
+        if (tower.angle !== undefined) ctx.rotate(tower.angle);
+        ctx.drawImage(hormigaHielo, -towerSize/2, -towerSize/2, towerSize, towerSize);
+        ctx.restore();
+        
+        ctx.fillStyle = 'white';
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 2;
+        ctx.font = 'bold 12px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.strokeText(tower.level, tower.x, tower.y - towerSize/2 - 8);
+        ctx.fillText(tower.level, tower.x, tower.y - towerSize/2 - 8);
+      } else if (tower.type === 'carnivore' && imagenCarnivoraCargada && hormigaCarnivora.complete) {
+        ctx.save();
+        ctx.translate(tower.x, tower.y);
+        if (tower.angle !== undefined) ctx.rotate(tower.angle);
+        
+        let extraRotation = 0;
+        if (tower.meleeAnimation && tower.meleeAnimation.active && tower.meleeAnimation.frame === 1) {
+          extraRotation = Math.PI / 6;
+        }
+        ctx.rotate(extraRotation);
+        
+        ctx.drawImage(hormigaCarnivora, -towerSize/2, -towerSize/2, towerSize, towerSize);
+        ctx.restore();
+        
+        ctx.fillStyle = 'white';
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 2;
+        ctx.font = 'bold 12px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.strokeText(tower.level, tower.x, tower.y - towerSize/2 - 8);
+        ctx.fillText(tower.level, tower.x, tower.y - towerSize/2 - 8);
+      } else {
+        dibujarTorreFallback(tower);
+      }
       
       // Indicador de rango para la torre seleccionada
       if (tower === gameState.selectedTower) {
@@ -2614,10 +2739,20 @@ document.addEventListener('DOMContentLoaded', function() {
   // Draw projectiles
   function drawProjectiles() {
     for (const projectile of gameState.projectiles) {
-      ctx.fillStyle = projectile.color;
-      ctx.beginPath();
-      ctx.arc(projectile.x, projectile.y, projectile.size, 0, Math.PI * 2);
-      ctx.fill();
+      if (projectile.towerType === 'poison' && proyectilVenenoCargado && proyectilVeneno.complete) {
+        ctx.drawImage(proyectilVeneno, projectile.x - projectile.size, projectile.y - projectile.size, projectile.size * 2, projectile.size * 2);
+      } else if (projectile.towerType === 'fire' && proyectilFuegoCargado && proyectilFuego.complete) {
+        ctx.drawImage(proyectilFuego, projectile.x - projectile.size, projectile.y - projectile.size, projectile.size * 2, projectile.size * 2);
+      } else if (projectile.towerType === 'ice' && proyectilHieloCargado && proyectilHielo.complete) {
+        ctx.drawImage(proyectilHielo, projectile.x - projectile.size, projectile.y - projectile.size, projectile.size * 2, projectile.size * 2);
+      } else if (projectile.towerType === 'carnivore' && proyectilCarnivoraCargado && proyectilCarnivora.complete) {
+        ctx.drawImage(proyectilCarnivora, projectile.x - projectile.size, projectile.y - projectile.size, projectile.size * 2, projectile.size * 2);
+      } else {
+        ctx.fillStyle = projectile.color;
+        ctx.beginPath();
+        ctx.arc(projectile.x, projectile.y, projectile.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
   }
   
