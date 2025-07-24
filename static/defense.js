@@ -1,23 +1,13 @@
 // Tower Defense Game for AntEmpire
 document.addEventListener('DOMContentLoaded', function() {
-  // Cargar la imagen de la torre básica o usar un fallback
-  const torreBasica = new Image();
-  torreBasica.src = '/static/images/torreBasica.png';
+  // Cargar imagen de tile básico
+  const cespedBasico = new Image();
+  cespedBasico.src = '/static/tile/cespedBasico.png';
   
-  // Variable para controlar si la imagen se cargó correctamente
-  let imagenCargada = false;
+  let cespedBasicoCargado = false;
   
-  // Debug image loading
-  torreBasica.onload = function() {
-    console.log('Torre básica cargada correctamente');
-    imagenCargada = true;
-  };
-  
-  torreBasica.onerror = function() {
-    console.error('Error al cargar la imagen de la torre básica - usando fallback');
-    // No intentar usar la imagen si hay error
-    imagenCargada = false;
-  };
+  cespedBasico.onload = () => cespedBasicoCargado = true;
+  cespedBasico.onerror = () => cespedBasicoCargado = false;
   
   // Configuración simple para torres
   const towerSize = 40; // Tamaño fijo para todas las torres
@@ -30,13 +20,13 @@ document.addEventListener('DOMContentLoaded', function() {
   const gameOverlay = document.getElementById('gameOverlay');
   const gameMessage = document.getElementById('gameMessage');
   const startGameBtn = document.getElementById('startGameBtn');
-  const startWaveBtn = document.getElementById('startWaveBtn');
+  const startWaveBtn = null; // Removed from DOM
   const speedBtn = document.getElementById('speedBtn');
   const sellTowerBtn = document.getElementById('sellTowerBtn');
   const upgradeTowerBtn = document.getElementById('upgradeTowerBtn');
   const battleLog = document.getElementById('battleLog');
-  const healthValue = document.getElementById('healthValue');
-  const healthBarFill = document.getElementById('healthBarFill');
+  const healthValue = document.getElementById('mapHealth');
+  const healthBarFill = null; // Removed from DOM
   
   // Weather System
   const weatherTypes = {
@@ -114,6 +104,7 @@ document.addEventListener('DOMContentLoaded', function() {
     enemiesPerWave: 10,
     waveCompleted: false,
     waveTimer: 3, // Temporizador reducido a 3 segundos
+    waveTimeLimit: 27, // Límite de tiempo por oleada base
     showRangePreview: false, // Para mostrar la previsualización del rango
     rangePreviewX: 0,
     rangePreviewY: 0,
@@ -122,6 +113,20 @@ document.addEventListener('DOMContentLoaded', function() {
     weatherTimer: 0,
     weatherDuration: 120,
     techPoints: 0,
+    nestLevel: 1, // Nivel del hormiguero
+    nest: {
+      type: 'nest',
+      name: 'Hormiguero',
+      level: 1,
+      damage: 0,
+      range: 0,
+      fireRate: 0,
+      upgradeCost: 50,
+      upgradeMultiplier: 1.2,
+      element: 'normal',
+      x: 0,
+      y: 0
+    },
     unlockedTowers: ["basic", "shooter", "bomber", "poison", "fire", "ice", "carnivore", "queen"],
     techTree: {
       damage: 0, // Nivel de mejora de daño
@@ -143,7 +148,6 @@ document.addEventListener('DOMContentLoaded', function() {
   // Cargar torres desbloqueadas desde localStorage (desactivado para mostrar todas)
   const loadUnlockedTowers = () => {
     // Función desactivada - usar torres por defecto
-    console.log("Torres disponibles:", gameState.unlockedTowers);
   };
   
   // Cargar torres desbloqueadas al inicio
@@ -165,50 +169,30 @@ document.addEventListener('DOMContentLoaded', function() {
   function generateRandomPath() {
     map.path = [];
     
-    // Random start and end points
-    const sides = ['left', 'right', 'top', 'bottom'];
-    const startSide = sides[Math.floor(Math.random() * sides.length)];
-    let endSide;
+    // 4 predefined map variants with long paths
+    const variants = [
+      // Variant 1: Left to right with curves
+      { start: { x: 0, y: 6 }, end: { x: 19, y: 6 }, waypoints: [{ x: 5, y: 3 }, { x: 10, y: 9 }, { x: 15, y: 2 }] },
+      // Variant 2: Top to bottom zigzag
+      { start: { x: 10, y: 0 }, end: { x: 10, y: 11 }, waypoints: [{ x: 3, y: 3 }, { x: 17, y: 6 }, { x: 5, y: 9 }] },
+      // Variant 3: Diagonal with multiple turns
+      { start: { x: 0, y: 2 }, end: { x: 19, y: 10 }, waypoints: [{ x: 8, y: 8 }, { x: 12, y: 3 }, { x: 6, y: 10 }] },
+      // Variant 4: Complex S-curve
+      { start: { x: 19, y: 3 }, end: { x: 0, y: 9 }, waypoints: [{ x: 12, y: 7 }, { x: 8, y: 2 }, { x: 4, y: 8 }] }
+    ];
     
-    // Ensure end is on opposite side
-    do {
-      endSide = sides[Math.floor(Math.random() * sides.length)];
-    } while (endSide === startSide);
+    const variant = variants[Math.floor(Math.random() * variants.length)];
+    map.startPoint = variant.start;
+    map.endPoint = variant.end;
     
-    // Set start point
-    switch(startSide) {
-      case 'left':
-        map.startPoint = { x: 0, y: Math.floor(Math.random() * (map.gridHeight - 2)) + 1 };
-        break;
-      case 'right':
-        map.startPoint = { x: map.gridWidth - 1, y: Math.floor(Math.random() * (map.gridHeight - 2)) + 1 };
-        break;
-      case 'top':
-        map.startPoint = { x: Math.floor(Math.random() * (map.gridWidth - 2)) + 1, y: 0 };
-        break;
-      case 'bottom':
-        map.startPoint = { x: Math.floor(Math.random() * (map.gridWidth - 2)) + 1, y: map.gridHeight - 1 };
-        break;
+    // Generate path through waypoints
+    const allPoints = [variant.start, ...variant.waypoints, variant.end];
+    const waypoints = [];
+    
+    for (let i = 0; i < allPoints.length - 1; i++) {
+      const segment = createPathSegment(allPoints[i], allPoints[i + 1]);
+      waypoints.push(...(i === 0 ? segment : segment.slice(1)));
     }
-    
-    // Set end point
-    switch(endSide) {
-      case 'left':
-        map.endPoint = { x: 0, y: Math.floor(Math.random() * (map.gridHeight - 2)) + 1 };
-        break;
-      case 'right':
-        map.endPoint = { x: map.gridWidth - 1, y: Math.floor(Math.random() * (map.gridHeight - 2)) + 1 };
-        break;
-      case 'top':
-        map.endPoint = { x: Math.floor(Math.random() * (map.gridWidth - 2)) + 1, y: 0 };
-        break;
-      case 'bottom':
-        map.endPoint = { x: Math.floor(Math.random() * (map.gridWidth - 2)) + 1, y: map.gridHeight - 1 };
-        break;
-    }
-    
-    // Generate path using A* like algorithm
-    const waypoints = generateWaypoints(map.startPoint, map.endPoint);
     
     // Convert waypoints to pixel coordinates
     waypoints.forEach(point => {
@@ -287,12 +271,17 @@ document.addEventListener('DOMContentLoaded', function() {
     // Generate new path
     generateRandomPath();
     
+    // Set nest position for clicking
+    gameState.nestPosition = {
+      x: map.path[map.path.length - 1].x,
+      y: map.path[map.path.length - 1].y,
+      radius: 20
+    };
+    
     // Update displays
     updateResourceDisplay();
     logMessage('¡Nuevo mapa generado! Coloca tus torres estratégicamente.');
-    
-    // Enable start wave button
-    startWaveBtn.disabled = false;
+    logMessage(`Hormiguero Nv.${gameState.nestLevel} - Clic en 🏠 para mejorar (${gameState.nestLevel * 50} hojas)`);
     
     // Hide wave timer
     document.getElementById('waveTimer').style.display = 'none';
@@ -392,14 +381,16 @@ document.addEventListener('DOMContentLoaded', function() {
     carnivore: {
       name: "Hormiga Carnívora",
       cost: 50,
-      damage: 40,
+      damage: 7.14,
       range: 80,
-      fireRate: 0.4,
+      fireRate: 2,
       projectileSpeed: 5,
       color: '#9b59b6',
       upgradeCost: 25,
       upgradeMultiplier: 1.5,
       devourChance: 0.1, // 10% de devorar al enemigo
+      areaEffect: true,
+      areaRadius: 38,
       element: "normal",
       rarity: "mítica"
     },
@@ -413,9 +404,11 @@ document.addEventListener('DOMContentLoaded', function() {
       color: '#f1c40f',
       upgradeCost: 50,
       upgradeMultiplier: 1.6,
-      spawnRate: 0.05, // 5% de generar una hormiga soldado
-      auraRange: 120, // Rango del aura
-      auraBuff: 0.2, // 20% de mejora para torres cercanas
+      spawnRate: 0.05,
+      auraRange: 120,
+      auraBuff: 0.2,
+      nestDamage: 25, // Daño del nido
+      nestRange: 100, // Rango del nido
       element: "normal",
       rarity: "legendaria"
     }
@@ -562,6 +555,18 @@ document.addEventListener('DOMContentLoaded', function() {
   // Initialize Game
   function initGame() {
     generateRandomPath();
+    
+    // Set nest position for clicking
+    gameState.nestPosition = {
+      x: map.path[map.path.length - 1].x,
+      y: map.path[map.path.length - 1].y,
+      radius: 20
+    };
+    
+    // Update nest coordinates
+    gameState.nest.x = map.path[map.path.length - 1].x;
+    gameState.nest.y = map.path[map.path.length - 1].y;
+    
     updateResourceDisplay();
     updateHealthDisplay();
     
@@ -592,13 +597,17 @@ document.addEventListener('DOMContentLoaded', function() {
     if (mobileSpeedValue) mobileSpeedValue.textContent = gameState.gameSpeed;
     
     // Event listeners
-    startGameBtn.addEventListener('click', startGame);
-    startWaveBtn.addEventListener('click', startWave);
+    if (startGameBtn) {
+      startGameBtn.addEventListener('click', startGame);
+    }
+    
     speedBtn.addEventListener('click', toggleGameSpeed);
+    // Nest upgrade is now handled by clicking on the nest in the map
     sellTowerBtn.addEventListener('click', sellSelectedTower);
     upgradeTowerBtn.addEventListener('click', upgradeSelectedTower);
     document.getElementById('deselectTowerBtn').addEventListener('click', deselectTower);
-    document.getElementById('mobileStartWaveBtn').addEventListener('click', startWave);
+    const mobileStartWaveBtn = document.getElementById('mobileStartWaveBtn');
+    if (mobileStartWaveBtn) mobileStartWaveBtn.addEventListener('click', startWave);
     const newMapBtn = document.getElementById('newMapBtn');
     const mobileNewMapBtn = document.getElementById('mobileNewMapBtn');
     if (newMapBtn) newMapBtn.addEventListener('click', generateNewMap);
@@ -653,8 +662,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
     
-    // Mostrar mensaje de torres disponibles
-    console.log("Torres disponibles:", gameState.unlockedTowers);
+    // Torres filtradas silenciosamente
   }
   
   // Setup tower selection panel
@@ -842,7 +850,9 @@ document.addEventListener('DOMContentLoaded', function() {
       target: null,
       areaEffect: towerTypes[type].areaEffect || false,
       areaRadius: towerTypes[type].areaRadius || 0,
-      direction: 0 // 0: down, 1: left, 2: right, 3: up
+      direction: 0, // 0: down, 1: left, 2: right, 3: up
+      angle: 0, // Ángulo de rotación para seguir enemigos
+      meleeAnimation: null // Animación de ataque cuerpo a cuerpo
     };
     
     // Add tower to game state
@@ -897,6 +907,18 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Hide context menu
     document.getElementById('towerContextMenu').style.display = 'none';
+    
+    // Check if clicked on nest FIRST
+    if (gameState.nestPosition) {
+      const nestDist = Math.sqrt(
+        Math.pow(x - gameState.nestPosition.x, 2) + 
+        Math.pow(y - gameState.nestPosition.y, 2)
+      );
+      if (nestDist <= gameState.nestPosition.radius) {
+        selectNest();
+        return;
+      }
+    }
     
     // If a tower type is selected, try to place it
     if (gameState.selectedTowerType) {
@@ -1051,11 +1073,17 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (tower) {
       gameState.selectedTower = tower;
-      sellTowerBtn.disabled = false;
       
-      // Enable upgrade button if player has enough resources
-      const upgradeCost = Math.floor(towerTypes[tower.type].upgradeCost * Math.pow(tower.level, 1.5));
-      upgradeTowerBtn.disabled = gameState.resources < upgradeCost;
+      // Disable sell/upgrade for temporary towers
+      if (tower.isTemporary) {
+        sellTowerBtn.disabled = true;
+        upgradeTowerBtn.disabled = true;
+      } else {
+        sellTowerBtn.disabled = false;
+        const upgradeCost = Math.floor(towerTypes[tower.type].upgradeCost * Math.pow(tower.level, 1.5));
+        const canUpgrade = tower.type === 'queen' || canUpgradeTowers();
+        upgradeTowerBtn.disabled = gameState.resources < upgradeCost || !canUpgrade;
+      }
       
       updateTowerInfoPanel(tower);
       
@@ -1089,6 +1117,31 @@ document.addEventListener('DOMContentLoaded', function() {
     const towerInfo = document.getElementById('towerInfo');
     const upgradePanel = document.getElementById('upgradePanel');
     const toolbarTowerInfo = document.getElementById('toolbarTowerInfo');
+    
+    // Handle nest info display
+    if (tower.type === 'nest') {
+      if (towerInfo && upgradePanel) {
+        towerInfo.innerHTML = `
+          <div style="background: rgba(0,0,0,0.1); padding: 10px; border-radius: 5px; margin-bottom: 10px;">
+            <h3 style="margin: 0 0 8px 0; color: var(--text-title);">${tower.name} (Nivel ${tower.level})</h3>
+            <div style="margin: 3px 0;">🏠 Centro de investigación</div>
+            <div style="margin: 3px 0;">🔧 Permite mejorar torres</div>
+            <div style="margin: 3px 0;">🎯 Límite de nivel: ${tower.level}</div>
+          </div>
+        `;
+        
+        const upgradeCost = Math.floor(tower.upgradeCost * Math.pow(tower.level, 1.5));
+        upgradePanel.innerHTML = `
+          <div style="background: rgba(163,198,68,0.1); padding: 10px; border-radius: 5px;">
+            <h4 style="margin: 0 0 8px 0; color: var(--text-title);">Mejora a Nivel ${tower.level + 1}</h4>
+            <div style="margin: 3px 0;">💰 Coste: ${upgradeCost} 🍃</div>
+            <div style="margin: 3px 0;">🔄 Permite torres nivel ${tower.level + 1}</div>
+          </div>
+        `;
+      }
+      return;
+    }
+    
     const type = towerTypes[tower.type];
     
     // Update sidebar panel
@@ -1207,12 +1260,50 @@ document.addEventListener('DOMContentLoaded', function() {
     logMessage(`Torre vendida por ${sellValue} hojas`);
   }
   
+  // Check if upgrades are enabled
+  function canUpgradeTowers() {
+    return gameState.towers.some(tower => tower.type === 'queen');
+  }
+  
   // Upgrade selected tower
   function upgradeSelectedTower() {
     if (!gameState.selectedTower) return;
     
     const tower = gameState.selectedTower;
+    
+    // Handle nest upgrade
+    if (tower.type === 'nest') {
+      const upgradeCost = Math.floor(tower.upgradeCost * Math.pow(tower.level, 1.5));
+      
+      // Check if player has enough resources
+      if (gameState.resources < upgradeCost) {
+        logMessage("No tienes suficientes hojas para mejorar el hormiguero");
+        return;
+      }
+      
+      // Upgrade nest
+      tower.level++;
+      gameState.nestLevel = tower.level;
+      
+      // Deduct resources
+      gameState.resources -= upgradeCost;
+      updateResourceDisplay();
+      
+      // Update tower info panel
+      updateTowerInfoPanel(tower);
+      
+      logMessage(`${tower.name} mejorado a nivel ${tower.level}`);
+      return;
+    }
+    
     const type = towerTypes[tower.type];
+    
+    // Check if upgrades are enabled (except for queen towers)
+    if (tower.type !== 'queen' && !canUpgradeTowers()) {
+      logMessage("Necesitas una Hormiga Reina para mejorar otras torres");
+      return;
+    }
+    
     const upgradeCost = Math.floor(type.upgradeCost * Math.pow(tower.level, 1.5));
     
     // Check if player has enough resources
@@ -1238,23 +1329,42 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Start the game
   function startGame() {
-    console.log('Iniciando juego...');
     try {
       gameState.isPlaying = true;
       gameOverlay.style.display = 'none';
-      logMessage("¡Juego iniciado! Coloca torres rápido, la oleada comenzará en 3 segundos.");
+      logMessage("¡Juego iniciado! Coloca torres rápido, la oleada comenzará en 5 segundos.");
       
       // Update speed button text to match default speed
       speedBtn.textContent = `Velocidad: x${gameState.gameSpeed}`;
       
+      // Start first wave timer
+      gameState.waveTimer = 5;
+      gameState.waveCompleted = false;
+      
       // Start game loop
       gameState.lastFrameTime = performance.now();
       requestAnimationFrame(gameLoop);
-      console.log('Juego iniciado correctamente');
     } catch (error) {
       console.error('Error al iniciar el juego:', error);
-      alert('Error al iniciar el juego: ' + error.message);
     }
+  }
+  
+  // Select nest function
+  function selectNest() {
+    gameState.selectedTower = gameState.nest;
+    sellTowerBtn.disabled = true; // Can't sell nest
+    
+    const upgradeCost = Math.floor(gameState.nest.upgradeCost * Math.pow(gameState.nest.level, 1.5));
+    upgradeTowerBtn.disabled = gameState.resources < upgradeCost;
+    
+    // Also update toolbar buttons
+    const toolbarUpgradeBtn = document.getElementById('toolbarUpgradeBtn');
+    if (toolbarUpgradeBtn) {
+      toolbarUpgradeBtn.disabled = gameState.resources < upgradeCost;
+    }
+    
+    updateTowerInfoPanel(gameState.nest);
+    logMessage('Hormiguero seleccionado - Usa el botón Mejorar');
   }
   
   // Start a wave of enemies
@@ -1265,9 +1375,9 @@ document.addEventListener('DOMContentLoaded', function() {
     gameState.enemiesSpawned = 0;
     gameState.enemySpawnTimer = 0;
     gameState.waveCompleted = false;
+    gameState.waveTimeLimit = 27 * Math.pow(1.015, gameState.wave - 1); // 27s base + 1.5% por nivel
     
-    // Disable start wave button
-    startWaveBtn.disabled = true;
+
     
     // Hide wave timer
     document.getElementById('waveTimer').style.display = 'none';
@@ -1361,60 +1471,34 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Create enemy with given type and health multiplier
   function createEnemy(enemyType, healthMultiplier) {
-    try {
-      if (!enemyTypes[enemyType]) {
-        console.error('Tipo de enemigo no válido:', enemyType);
-        enemyType = 'basic'; // Usar tipo básico como fallback
-      }
-      
-      const enemy = {
-        type: enemyType,
-        x: map.path[0].x,
-        y: map.path[0].y,
-        health: enemyTypes[enemyType].health * healthMultiplier,
-        maxHealth: enemyTypes[enemyType].health * healthMultiplier,
-        speed: enemyTypes[enemyType].speed,
-        reward: enemyTypes[enemyType].reward,
-        damage: enemyTypes[enemyType].damage,
-        color: enemyTypes[enemyType].color,
-        size: enemyTypes[enemyType].size,
-        pathIndex: 0,
-        progress: 0,
-        direction: 0, // Will be updated based on movement
-        effects: [] // Para efectos como veneno, quemadura, congelación, etc.
-      };
-      
-      // Apply weather effects to enemy
-      try {
-        const weatherEffects = applyWeatherEffectsToEnemy(enemy);
-        if (weatherEffects && weatherEffects.speed !== undefined) {
-          enemy.speed = weatherEffects.speed;
-        }
-      } catch (weatherError) {
-        console.error('Error al aplicar efectos del clima:', weatherError);
-      }
-      
-      return enemy;
-    } catch (error) {
-      console.error('Error al crear enemigo:', error);
-      // Crear un enemigo básico como fallback
-      return {
-        type: 'basic',
-        x: map.path[0].x,
-        y: map.path[0].y,
-        health: 50,
-        maxHealth: 50,
-        speed: 1,
-        reward: 5,
-        damage: 5,
-        color: '#e74c3c',
-        size: 15,
-        pathIndex: 0,
-        progress: 0,
-        direction: 0,
-        effects: []
-      };
+    if (!enemyTypes[enemyType]) {
+      enemyType = 'basic'; // Usar tipo básico como fallback
     }
+    
+    const enemy = {
+      type: enemyType,
+      x: map.path[0].x,
+      y: map.path[0].y,
+      health: enemyTypes[enemyType].health * healthMultiplier,
+      maxHealth: enemyTypes[enemyType].health * healthMultiplier,
+      speed: enemyTypes[enemyType].speed,
+      reward: enemyTypes[enemyType].reward,
+      damage: enemyTypes[enemyType].damage,
+      color: enemyTypes[enemyType].color,
+      size: enemyTypes[enemyType].size,
+      pathIndex: 0,
+      progress: 0,
+      direction: 0,
+      effects: []
+    };
+    
+    // Apply weather effects to enemy
+    const weatherEffects = applyWeatherEffectsToEnemy(enemy);
+    if (weatherEffects && weatherEffects.speed !== undefined) {
+      enemy.speed = weatherEffects.speed;
+    }
+    
+    return enemy;
   }
   
   // Move enemies along the path
@@ -1511,10 +1595,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
   
-  // Función vacía para mantener compatibilidad
+  // Actualizar dirección de la torre para que apunte al enemigo
   function updateTowerDirection(tower) {
-    // Ya no necesitamos actualizar la dirección de la torre
-    return;
+    if (!tower.target) return;
+    
+    // Calcular ángulo hacia el objetivo
+    const dx = tower.target.x - tower.x;
+    const dy = tower.target.y - tower.y;
+    tower.angle = Math.atan2(dy, dx);
   }
   
   // Check if enemy is still alive
@@ -1563,14 +1651,47 @@ document.addEventListener('DOMContentLoaded', function() {
     // Check for special tower abilities
     const towerType = towerTypes[tower.type];
     
+    // Carnivore tower melee attack
+    if (tower.type === 'carnivore') {
+      // Start melee animation
+      tower.meleeAnimation = {
+        active: true,
+        timer: 0.2,
+        frame: 0 // 0: normal, 1: attack
+      };
+      
+      // Direct damage to target and area
+      if (isEnemyAlive(tower.target)) {
+        damageEnemy(tower.target, damage, {
+          towerType: tower.type,
+          devourChance: towerType.devourChance || 0
+        });
+      }
+      
+      // Area damage
+      damageEnemiesInArea(tower.target.x, tower.target.y, tower.areaRadius, damage * 0.7);
+      return;
+    }
+    
     if (tower.areaEffect) {
       // Area effect tower (bomber)
       damageEnemiesInArea(tower.target.x, tower.target.y, tower.areaRadius, damage);
     } else {
+      // Calculate projectile spawn position
+      let projectileX = tower.x;
+      let projectileY = tower.y;
+      
+      // For fire, poison and ice towers, spawn projectile from the cannon/front
+      if ((tower.type === 'fire' || tower.type === 'poison' || tower.type === 'ice') && tower.angle !== undefined) {
+        const cannonLength = towerSize / 3;
+        projectileX = tower.x + Math.cos(tower.angle) * cannonLength;
+        projectileY = tower.y + Math.sin(tower.angle) * cannonLength;
+      }
+      
       // Create projectile with special effects
       const projectile = {
-        x: tower.x,
-        y: tower.y,
+        x: projectileX,
+        y: projectileY,
         targetX: tower.target.x,
         targetY: tower.target.y,
         target: tower.target,
@@ -1592,9 +1713,16 @@ document.addEventListener('DOMContentLoaded', function() {
         devourChance: towerType.devourChance || 0
       };
       
-      // Queen tower special ability: chance to spawn a basic tower
-      if (tower.type === 'queen' && Math.random() < towerType.spawnRate) {
-        spawnBasicTowerNear(tower);
+      // Queen tower abilities
+      if (tower.type === 'queen') {
+        // Spawn temporary towers
+        if (Math.random() < towerType.spawnRate) {
+          spawnBasicTowerNear(tower);
+        }
+        // Nest damage
+        if (isEnemyAlive(tower.target)) {
+          damageEnemy(tower.target, towerType.nestDamage);
+        }
       }
       
       gameState.projectiles.push(projectile);
@@ -1620,20 +1748,24 @@ document.addEventListener('DOMContentLoaded', function() {
       if (x >= 0 && x <= map.width && y >= 0 && y <= map.height && 
           !isOnPath(x, y) && !isTowerAt(x, y)) {
         
-        // Create a basic tower for free
+        // Create a temporary basic tower
         const tower = {
           type: 'basic',
           x: x,
           y: y,
-          damage: towerTypes.basic.damage * 0.7, // 70% damage of normal basic tower
-          range: towerTypes.basic.range * 0.8, // 80% range
+          damage: towerTypes.basic.damage * 0.7,
+          range: towerTypes.basic.range * 0.8,
           fireRate: towerTypes.basic.fireRate,
           projectileSpeed: towerTypes.basic.projectileSpeed,
           color: towerTypes.basic.color,
           lastFired: 0,
           level: 1,
           target: null,
-          direction: 0
+          direction: 0,
+          angle: 0,
+          meleeAnimation: null,
+          isTemporary: true,
+          lifeTimer: 12 // 12 seconds
         };
         
         // Add tower to game state
@@ -1658,6 +1790,34 @@ document.addEventListener('DOMContentLoaded', function() {
         const falloff = 1 - (distance / radius);
         const actualDamage = damage * falloff;
         damageEnemy(enemy, actualDamage);
+      }
+    }
+  }
+  
+  // Update towers animations and temporary towers
+  function updateTowerAnimations(deltaTime) {
+    for (let i = gameState.towers.length - 1; i >= 0; i--) {
+      const tower = gameState.towers[i];
+      
+      // Update melee animations
+      if (tower.meleeAnimation && tower.meleeAnimation.active) {
+        tower.meleeAnimation.timer -= deltaTime;
+        if (tower.meleeAnimation.timer <= 0.1 && tower.meleeAnimation.frame === 0) {
+          tower.meleeAnimation.frame = 1;
+        }
+        if (tower.meleeAnimation.timer <= 0) {
+          tower.meleeAnimation.active = false;
+          tower.meleeAnimation.frame = 0;
+        }
+      }
+      
+      // Update temporary towers
+      if (tower.isTemporary) {
+        tower.lifeTimer -= deltaTime;
+        if (tower.lifeTimer <= 0) {
+          gameState.towers.splice(i, 1);
+          logMessage('Torre temporal desaparecida');
+        }
       }
     }
   }
@@ -1699,12 +1859,15 @@ document.addEventListener('DOMContentLoaded', function() {
     if (projectile) {
       // Poison effect
       if (projectile.poisonEffect && !enemy.effects.some(e => e.type === 'poison')) {
+        const originalSpeed = enemy.speed;
         enemy.effects.push({
           type: 'poison',
           damage: projectile.poisonDamage,
           duration: projectile.poisonDuration,
-          timer: projectile.poisonDuration
+          timer: projectile.poisonDuration,
+          originalSpeed: originalSpeed
         });
+        enemy.speed *= 0.9; // Reduce speed by 10%
       }
       
       // Burn effect
@@ -1775,8 +1938,8 @@ document.addEventListener('DOMContentLoaded', function() {
       
       // Remove expired effects
       if (effect.timer <= 0) {
-        // Restore original speed for freeze effect
-        if (effect.type === 'freeze') {
+        // Restore original speed for freeze and poison effects
+        if (effect.type === 'freeze' || effect.type === 'poison') {
           enemy.speed = effect.originalSpeed;
         }
         enemy.effects.splice(i, 1);
@@ -1907,12 +2070,11 @@ document.addEventListener('DOMContentLoaded', function() {
         gameState.enemies.length === 0 &&
         !gameState.waveCompleted) {
       
-      gameState.waveCompleted = true;
+      gameState.waveCompleted = false;
       gameState.isWaveActive = false;
       gameState.wave++;
       
-      // Enable start wave button
-      startWaveBtn.disabled = false;
+
       
       // Update wave display
       document.querySelector('#wave .resource-value').textContent = `${gameState.wave}/${gameState.maxWaves}`;
@@ -1946,8 +2108,8 @@ document.addEventListener('DOMContentLoaded', function() {
       if (gameState.wave > gameState.maxWaves) {
         gameOver(true);
       } else {
-        // Reset wave timer for next wave
-        gameState.waveTimer = 3; // 3 segundos por defecto
+        // Auto start next wave after 5 seconds
+        gameState.waveTimer = 5;
         document.getElementById('waveTimerValue').textContent = gameState.waveTimer;
         document.getElementById('waveTimer').style.display = 'block';
       }
@@ -1997,23 +2159,13 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Update health display
   function updateHealthDisplay() {
-    const healthPercent = Math.max(0, Math.min(100, (gameState.health / gameState.maxHealth) * 100));
-    healthValue.textContent = gameState.health;
-    healthBarFill.style.width = `${healthPercent}%`;
-    
-    // Change color based on health
-    if (healthPercent < 25) {
-      healthBarFill.style.backgroundColor = 'var(--health-bar-low)';
-    } else {
-      healthBarFill.style.backgroundColor = 'var(--health-bar)';
-    }
-    
     // Update map health indicator
     const mapHealth = document.getElementById('mapHealth');
     if (mapHealth) mapHealth.textContent = gameState.health;
     
     // Update mobile panel
-    document.getElementById('mobileHealth').textContent = gameState.health;
+    const mobileHealth = document.getElementById('mobileHealth');
+    if (mobileHealth) mobileHealth.textContent = gameState.health;
   }
   
   // Log message to battle log
@@ -2127,33 +2279,27 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Apply Weather Effects to Enemy
   function applyWeatherEffectsToEnemy(enemy) {
-    try {
-      if (!enemy || !enemy.type) {
-        return { speed: enemy ? enemy.speed : 1 };
-      }
-      
-      const weather = weatherTypes[gameState.currentWeather] || weatherTypes.normal;
-      const effects = weather.effects || {};
-      let speedMultiplier = 1;
-      
-      // Apply global effects if any
-      if (effects.enemyDebuffs && effects.enemyDebuffs.global) {
-        if (effects.enemyDebuffs.global.speed) speedMultiplier += effects.enemyDebuffs.global.speed;
-      }
-      
-      // Apply enemy-type specific effects
-      if (effects.enemyBuffs && effects.enemyBuffs[enemy.type]) {
-        if (effects.enemyBuffs[enemy.type].speed) speedMultiplier += effects.enemyBuffs[enemy.type].speed;
-      }
-      
-      // Return modified values
-      return {
-        speed: enemy.speed * speedMultiplier
-      };
-    } catch (error) {
-      console.error('Error al aplicar efectos del clima al enemigo:', error);
+    if (!enemy || !enemy.type) {
       return { speed: enemy ? enemy.speed : 1 };
     }
+    
+    const weather = weatherTypes[gameState.currentWeather] || weatherTypes.normal;
+    const effects = weather.effects || {};
+    let speedMultiplier = 1;
+    
+    // Apply global effects if any
+    if (effects.enemyDebuffs && effects.enemyDebuffs.global) {
+      if (effects.enemyDebuffs.global.speed) speedMultiplier += effects.enemyDebuffs.global.speed;
+    }
+    
+    // Apply enemy-type specific effects
+    if (effects.enemyBuffs && effects.enemyBuffs[enemy.type]) {
+      if (effects.enemyBuffs[enemy.type].speed) speedMultiplier += effects.enemyBuffs[enemy.type].speed;
+    }
+    
+    return {
+      speed: enemy.speed * speedMultiplier
+    };
   }
   
   // Game Loop
@@ -2194,12 +2340,35 @@ document.addEventListener('DOMContentLoaded', function() {
       if (waveTimer) waveTimer.style.display = 'none';
     }
     
+    // Update wave time limit
+    if (gameState.isWaveActive) {
+      gameState.waveTimeLimit -= deltaTime;
+      if (gameState.waveTimeLimit <= 0) {
+        // Force end wave after 21 seconds
+        gameState.isWaveActive = false;
+        gameState.waveCompleted = false;
+        gameState.wave++;
+        gameState.waveTimer = 5;
+        
+        // Update wave display
+        document.querySelector('#wave .resource-value').textContent = `${gameState.wave}/${gameState.maxWaves}`;
+        
+        // Check if game is won
+        if (gameState.wave > gameState.maxWaves) {
+          gameOver(true);
+          return;
+        }
+        
+        logMessage(`Oleada ${gameState.wave - 1} terminada por tiempo`);
+      }
+    }
+    
     // Spawn enemies
     if (gameState.isWaveActive && gameState.enemiesSpawned < gameState.enemiesPerWave * gameState.wave) {
       gameState.enemySpawnTimer += deltaTime * gameState.gameSpeed;
       
       // Spawn rate based on wave - more spaced out enemies
-      const spawnInterval = 2 / (0.3 + gameState.wave * 0.08);
+      const spawnInterval = (2 * 1.07 * 1.07 * 1.11 * 1.15 * 1.18) / (0.3 + gameState.wave * 0.08);
       
       if (gameState.enemySpawnTimer >= spawnInterval) {
         spawnEnemy();
@@ -2210,6 +2379,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Update game entities
     moveEnemies(deltaTime);
     updateTowers(deltaTime);
+    updateTowerAnimations(deltaTime);
     updateProjectiles(deltaTime);
     
     // Draw game entities
@@ -2258,23 +2428,27 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Draw map
   function drawMap() {
-    // Draw subtle grid
-    ctx.strokeStyle = 'rgba(200, 200, 200, 0.3)';
-    ctx.lineWidth = 0.5;
-    
-    for (let x = 0; x < map.width; x += map.tileSize) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, map.height);
-      ctx.stroke();
+    // Draw background tiles
+    for (let x = 0; x < map.gridWidth; x++) {
+      for (let y = 0; y < map.gridHeight; y++) {
+        const tileX = x * map.tileSize;
+        const tileY = y * map.tileSize;
+        
+        // Use basic grass tile if available
+        if (cespedBasicoCargado && cespedBasico.complete) {
+          ctx.drawImage(cespedBasico, tileX, tileY, map.tileSize, map.tileSize);
+        } else {
+          // Fallback color
+          ctx.fillStyle = isOnPath(tileX + map.tileSize/2, tileY + map.tileSize/2) ? '#8B4513' : '#90EE90';
+          ctx.fillRect(tileX, tileY, map.tileSize, map.tileSize);
+        }
+      }
     }
     
-    for (let y = 0; y < map.height; y += map.tileSize) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(map.width, y);
-      ctx.stroke();
-    }
+    // Draw map border
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(0, 0, map.width, map.height);
     
     // Draw path with better visuals
     ctx.strokeStyle = '#d2b48c';
@@ -2334,7 +2508,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Spawn icon
     ctx.fillText('➤', map.path[0].x, map.path[0].y);
     
-    // Base icon
+    // Base icon (clickeable nest)
     ctx.fillText('🏠', map.path[map.path.length - 1].x, map.path[map.path.length - 1].y);
   }
   
@@ -2347,34 +2521,8 @@ document.addEventListener('DOMContentLoaded', function() {
       ctx.arc(tower.x + 2, tower.y + 2, map.tileSize / 3, 0, Math.PI * 2);
       ctx.fill();
       
-      if (tower.type === 'basic' && imagenCargada && torreBasica.complete) {
-        try {
-          // Dibujar la imagen de la torre sin rotación
-          ctx.drawImage(
-            torreBasica,
-            tower.x - towerSize/2,
-            tower.y - towerSize/2,
-            towerSize,
-            towerSize
-          );
-          
-          // Indicador de nivel de la torre
-          ctx.fillStyle = 'white';
-          ctx.strokeStyle = 'black';
-          ctx.lineWidth = 2;
-          ctx.font = 'bold 12px Arial';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.strokeText(tower.level, tower.x, tower.y - towerSize/2 - 8);
-          ctx.fillText(tower.level, tower.x, tower.y - towerSize/2 - 8);
-        } catch (error) {
-          console.error('Error al dibujar la torre:', error);
-          dibujarTorreFallback(tower);
-        }
-      } else {
-        // Fallback para otros tipos de torre o si la imagen no se cargó
-        dibujarTorreFallback(tower);
-      }
+      // Always use fallback rendering for all towers
+      dibujarTorreFallback(tower);
       
       // Indicador de rango para la torre seleccionada
       if (tower === gameState.selectedTower) {
@@ -2433,11 +2581,22 @@ document.addEventListener('DOMContentLoaded', function() {
   // Draw enemies
   function drawEnemies() {
     for (const enemy of gameState.enemies) {
-      // Draw enemy
-      ctx.fillStyle = enemy.color;
-      ctx.beginPath();
-      ctx.arc(enemy.x, enemy.y, enemy.size, 0, Math.PI * 2);
-      ctx.fill();
+      // Draw enemy icon only (no circle background)
+      ctx.font = `${enemy.size * 1.5}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      
+      const icons = {
+        basic: '🪲',
+        fast: '🕷️',
+        scout: '🐜',
+        soldier: '🐛',
+        wasp: '🐝',
+        beetle: '🪳',
+        boss: '🐛'
+      };
+      
+      ctx.fillText(icons[enemy.type] || '🪲', enemy.x, enemy.y);
       
       // Draw health bar
       const healthPercent = enemy.health / enemy.maxHealth;
